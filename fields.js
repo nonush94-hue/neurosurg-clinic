@@ -1,4 +1,4 @@
-/* Neurosurg Exam – definizione dei campi: sezioni comuni e patologie.
+/* Neurosurg Clinic – definizione dei campi: sezioni comuni e patologie.
    Ogni campo: [chiave, etichetta, tipo, opzioni, flag]
    tipo: s scelta singola · m scelta multipla · l elenco a discesa · n numero · t testo · a testo lungo · d data
          c calcolato (opzioni = funzione) · h titoletto
@@ -374,7 +374,64 @@ var CAT=[
  ['proc','Procedura','s',['Exeresi','Decompressione e stabilizzazione','Biopsia','Vertebroplastica','Radioterapia / SBRT'],'k'],
  ['eor','Exeresi','s',EOR,'kP']]},
 
-{id:'seeg',g:'Funzionale',l:'Epilessia farmacoresistente (SEEG)',s:'Epilessia - SEEG',tpl:'cran',f:[
+{id:'dbs',g:'Funzionale',l:'Stimolazione cerebrale profonda (DBS)',s:'DBS',tpl:'compl',f:[
+ ['-','Indicazione','h'],
+ ['ind','Indicazione','s',['Malattia di Parkinson','Tremore essenziale','Distonia','Epilessia','Disturbo ossessivo-compulsivo','Altro'],'k'],
+ ['anni','Durata di malattia (anni)','n','','k'],
+ ['hy','Hoehn-Yahr','s',['1','1.5','2','2.5','3','4','5']],
+ ['-','Valutazione motoria e cognitiva','h'],
+ ['u3off','MDS-UPDRS III – off farmaco','n'],
+ ['u3on','MDS-UPDRS III – on farmaco','n'],
+ ['ldopa','Risposta alla levodopa (%)','c',function(S){var a=num(S['x.dbs.u3off']),b=num(S['x.dbs.u3on']);return a>0&&!isNaN(b)?Math.round((a-b)/a*100):''}],
+ ['u3stim','MDS-UPDRS III – off farmaco / on stimolazione','n','','P'],
+ ['ledd','LEDD (mg/die)','n'],
+ ['tetras','TETRAS (tremore)','n'],
+ ['bfmdrs','BFMDRS (distonia)','n'],
+ ['moca','MoCA (/30)','n'],
+ ['-','Intervento','h'],
+ ['target','Target','s',['STN','GPi','VIM','ANT','Altro'],'k'],
+ ['lato','Lato','s',['Bilaterale','Destro','Sinistro'],'k'],
+ ['anest','Anestesia','s',['Paziente sveglio','Anestesia generale'],'k'],
+ ['mer','Microregistrazione','s',SN,'k'],
+ ['ipg','Generatore','s',['Ricaricabile','Non ricaricabile'],'k'],
+ ['stim','Parametri di stimolazione','t','es. 2,5 mA, 60 µs, 130 Hz, contatti 2-/C+','P'],
+ ['compl','Complicanze','m',['Emorragia','Infezione','Malposizionamento dell\'elettrodo','Rottura / migrazione','Effetti collaterali della stimolazione','Disturbi cognitivi / psichiatrici'],'P']]},
+
+{id:'vns',g:'Funzionale',l:'Stimolazione del nervo vago (VNS)',s:'VNS',tpl:'cran',f:[
+ ['ind','Indicazione','s',['Epilessia farmacoresistente','Depressione resistente'],'k'],
+ ['crisi','Tipo di crisi','m',['Focali consapevoli','Focali con alterazione della consapevolezza','Focali evolventi in bilaterali tonico-cloniche','Generalizzate'],'k'],
+ ['freq','Crisi al mese (n.)','n'],
+ ['naed','Antiepilettici provati (n.)','n','','k'],
+ ['prec','Chirurgia dell\'epilessia precedente','s',SN,'k'],
+ ['proc','Procedura','s',['Primo impianto','Sostituzione del generatore','Revisione / rimozione'],'k'],
+ ['ma','Corrente impostata (mA)','n','','P'],
+ ['compl','Complicanze','m',['Raucedine','Tosse','Dispnea','Paralisi della corda vocale','Infezione','Malfunzionamento'],'P'],
+ ['riduz','Riduzione delle crisi (%)','n','','F'],
+ ['mchugh','McHugh','s',['I','II','III','IV','V'],'F']]},
+
+{id:'epi',g:'Funzionale',l:'Chirurgia dell\'epilessia (resezione del focus)',s:'Chirurgia dell\'epilessia',tpl:'cran',f:[
+ ['-','Epilessia','h'],
+ ['crisi','Tipo di crisi','m',['Focali consapevoli','Focali con alterazione della consapevolezza','Focali evolventi in bilaterali tonico-cloniche'],'k'],
+ ['freq','Crisi al mese (n.)','n'],
+ ['anni','Durata dell\'epilessia (anni)','n','','k'],
+ ['naed','Antiepilettici provati (n.)','n','','k'],
+ ['rm','RM','s',['Lesionale','Non lesionale'],'k'],
+ ['pat','Substrato','l',['Sclerosi ippocampale','Displasia corticale focale','Tumore epilettogeno (LEAT)','Cavernoma','Esito gliotico / cicatriziale','Encefalite di Rasmussen','Non lesionale','Altro'],'k'],
+ ['lato','Lato','s',['Destro','Sinistro'],'k'],
+ ['lobo','Sede','s',['Temporale mesiale','Temporale laterale','Frontale','Parietale','Occipitale','Insulare','Multilobare / emisferica'],'k'],
+ ['inv','Valutazione invasiva','s',['No','SEEG','Elettrodi subdurali'],'k'],
+ ['-','Intervento','h'],
+ ['proc','Procedura','l',['Lobectomia temporale anteriore','Amigdaloippocampectomia selettiva','Lesionectomia','Lesionectomia estesa / corticectomia','Resezione extratemporale','Disconnessione / emisferotomia','Callosotomia','Ablazione laser (LITT)','Termocoagulazione (RF-TC)'],'k'],
+ ['ecog','Elettrocorticografia intraoperatoria','s',SN,'k'],
+ ['map','Mapping funzionale / awake','s',SN,'k'],
+ ['isto','Istologia','t','es. FCD tipo IIb (ILAE)','kP'],
+ ['def','Deficit post-operatori','m',['Campo visivo','Linguaggio','Memoria','Motorio'],'P'],
+ ['-','Esito','h'],
+ ['engel','Engel','s',['IA','IB','IC','ID','II','III','IV'],'F'],
+ ['ilae','ILAE (esito)','s',['1','2','3','4','5','6'],'F'],
+ ['aed','Antiepilettici','s',['Invariati','Ridotti','Sospesi'],'F']]},
+
+{id:'seeg',g:'Funzionale',l:'Epilessia farmacoresistente – SEEG (valutazione invasiva)',s:'Epilessia - SEEG',tpl:'cran',f:[
  ['crisi','Tipo di crisi','m',['Focali consapevoli','Focali con alterazione della consapevolezza','Focali evolventi in bilaterali tonico-cloniche'],'k'],
  ['freq','Frequenza delle crisi','t','es. 4 al mese'],
  ['naed','Antiepilettici provati (n.)','n','','k'],

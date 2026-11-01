@@ -1,4 +1,4 @@
-/* Neurosurg Exam – archivio pazienti e visite (IndexedDB, solo su questo dispositivo), esame neurologico, report, esportazione Excel e backup */
+/* Neurosurg Clinic – archivio pazienti e visite (IndexedDB, solo su questo dispositivo), esame neurologico, report, esportazione Excel e backup */
 (function(){
 'use strict';
 var NX=window.NX;
@@ -395,7 +395,7 @@ function fval(f,s){var v=s[f[0]];
 function fieldsText(list){var out=[];
   list.forEach(function(f){if(f[2]==='h'||!fvis(f))return;var v=fval(f,S);if(v==='')return;
     var m=f[1].match(/^(.*) \(([^)]*)\)$/);
-    if(f[2]==='n'&&m)out.push(m[1]+' '+String(v).replace('.',',')+(/^[\/%]/.test(m[2])?'':' ')+m[2]);
+    if(m&&(f[2]==='n'||(f[2]==='c'&&/^[\/%]/.test(m[2]))))out.push(m[1]+' '+String(v).replace('.',',')+(/^[\/%]/.test(m[2])?'':' ')+m[2]);
     else out.push(f[1]+': '+(f[2]==='s'||f[2]==='l'?lcw(v):v))});
   return out}
 function sideWord(d,s){return d&&s?'bilateralmente':d?'a destra':s?'a sinistra':''}
@@ -590,7 +590,7 @@ function drawGlossary(q){
 
 /* ---------- schermate: pazienti, paziente, visita ---------- */
 function renderHeader(view){
-  var h='Neurosurg Exam',sub='Visite neurochirurgiche. I dati restano solo su questo dispositivo.',btn='';
+  var h='Neurosurg Clinic',sub='Visite neurochirurgiche. I dati restano solo su questo dispositivo.',btn='';
   if(view!=='home'&&P){var a=ageAt(P.nascita,view==='visit'?S['d.date']:td());h=pname(P);
     if(view==='pat'){sub=[P.code,isFinite(a)?a+' anni':'',P.sesso].filter(Boolean).join(' · ');
       btn='<button class="btn quiet" type="button" data-act="home">← Pazienti</button>'}
@@ -718,18 +718,18 @@ function exportXlsx(anon){
   NX.CAT.forEach(function(c){var cv=vs.filter(function(v){return v.data['d.cat']===c.id});if(!cv.length)return;
     var cc=baseCols(false).concat(specCols(c.f));
     sheets.push({name:c.s,rows:[cc.map(function(x){return x.h})].concat(cv.map(function(v){return rowOfV(cc,v)}))})});
-  deliver(window.XLSXW.build(sheets),'NeurosurgExam_'+(anon?'anonimo_':'')+td()+'.xlsx');
+  deliver(window.XLSXW.build(sheets),'NeurosurgClinic_'+(anon?'anonimo_':'')+td()+'.xlsx');
 }
 function backup(){
   flush();
   var data={app:'neurosurg-exam',version:1,exported:new Date().toISOString(),pat:DB.pat,vis:DB.vis};
-  deliver(new Blob([JSON.stringify(data)],{type:'application/json'}),'NeurosurgExam_backup_'+td()+'.json');
+  deliver(new Blob([JSON.stringify(data)],{type:'application/json'}),'NeurosurgClinic_backup_'+td()+'.json');
   setMeta({backup:Date.now()});
   setTimeout(function(){if(!$('v-home').hidden){$('v-home').innerHTML=homeHtml();drawPList();$('hmsg').textContent='Backup creato: salvalo in File o OneDrive.'}},600);
 }
 function restore(text){
   var d,np=0,nv=0;try{d=JSON.parse(text)}catch(e){}
-  if(!d||d.app!=='neurosurg-exam'||!Array.isArray(d.pat)||!Array.isArray(d.vis)){$('hmsg').textContent='Il file non è un backup di Neurosurg Exam.';return}
+  if(!d||d.app!=='neurosurg-exam'||!Array.isArray(d.pat)||!Array.isArray(d.vis)){$('hmsg').textContent='Il file non è un backup di Neurosurg Clinic.';return}
   function merge(list,arr,store){arr.forEach(function(r){if(!r||!r.id)return;var e=DB[list].filter(function(x){return x.id===r.id})[0];
     if(!e){DB[list].push(r);put(store,r);list==='pat'?np++:nv++}else if((r.updated||0)>(e.updated||0)){Object.assign(e,r);put(store,e);list==='pat'?np++:nv++}})}
   merge('pat',d.pat,'pat');merge('vis',d.vis.filter(function(v){return v&&v.data}),'vis');

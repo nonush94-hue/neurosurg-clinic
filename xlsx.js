@@ -1,4 +1,4 @@
-/* Neurosurg Exam – scrittura di file .xlsx senza librerie esterne (zip non compresso + SpreadsheetML).
+/* Neurosurg Clinic – scrittura di file .xlsx senza librerie esterne (zip non compresso + SpreadsheetML).
    XLSXW.build([{name, rows}]) → Blob. Celle: numero, stringa, oppure {d:'AAAA-MM-GG'} per una data. La prima riga è l'intestazione. */
 window.XLSXW=(function(){
 var enc=new TextEncoder();

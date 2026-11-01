@@ -1,0 +1,417 @@
+/* Neurosurg Exam – definizione dei campi: sezioni comuni e patologie.
+   Ogni campo: [chiave, etichetta, tipo, opzioni, flag]
+   tipo: s scelta singola · m scelta multipla · l elenco a discesa · n numero · t testo · a testo lungo · d data
+         c calcolato (opzioni = funzione) · h titoletto
+   flag: k copiato nella visita successiva dello stesso paziente · P solo visite dopo l'intervento (post-op, dimissione, follow-up)
+         F solo follow-up · D solo dimissione · W campo a tutta larghezza
+   Nelle patologie la chiave viene prefissata con x.<id>. Le etichette diventano le intestazioni di colonna dell'Excel. */
+window.NX=(function(){
+var SN=['No','Sì'],LATO=['Destro','Sinistro','Bilaterale'],LATOM=['Destro','Sinistro','Bilaterale','Mediano'],
+ EOR=['Totale','Subtotale','Parziale'],G04=['0','1','2','3','4'],
+ LIVC=['C2–C3','C3–C4','C4–C5','C5–C6','C6–C7','C7–T1'],LIVL=['L1–L2','L2–L3','L3–L4','L4–L5','L5–S1'],
+ SEDE=['Frontale','Temporale','Parietale','Occipitale','Insulare','Talamo / gangli della base','Corpo calloso','Intraventricolare','Tronco encefalico','Cerebellare'];
+function num(x){x=parseFloat(String(x==null?'':x).replace(',','.'));return isFinite(x)?x:NaN}
+function sum(S,keys){var t=0;for(var i=0;i<keys.length;i++){var v=num(S[keys[i]]);if(isNaN(v))return '';t+=v}return t}
+
+/* id, etichetta lunga, etichetta breve, frase per il report */
+var VT=[['pre','Pre-operatoria / prima visita','Pre-op','pre-operatoria'],['post','Post-operatoria (reparto)','Post-op','post-operatoria'],
+ ['dim','Dimissione','Dimissione','di dimissione'],['fu','Follow-up ambulatoriale','Follow-up','di controllo ambulatoriale']];
+
+var QUAD=[
+ ['q.sx','Sintomo principale / motivo della visita (apre il testo del report)','a','es. Lombosciatalgia sinistra irradiata in territorio L5','W'],
+ ['q.esordio','Esordio','s',['Acuto','Subacuto','Cronico','Riscontro incidentale']],
+ ['q.durata','Durata dei sintomi','t','es. 3 mesi'],
+ ['q.decorso','Andamento','s',['Stabile','In peggioramento','In miglioramento','Fluttuante']],
+ ['q.lato','Lato dei sintomi','s',LATO],
+ ['q.sint','Sintomi','m',['Cefalea','Nausea / vomito','Crisi epilettiche','Alterazione della coscienza','Deficit motorio','Deficit sensitivo','Disturbi del linguaggio','Calo del visus','Diplopia','Deficit cognitivo / comportamentale','Disturbi dell\'equilibrio','Disturbi della marcia','Disturbi sfinterici','Disturbi endocrini','Dolore facciale','Cervicalgia','Cervicobrachialgia','Goffaggine delle mani','Lombalgia','Lombosciatalgia / cruralgia','Claudicatio neurogena']],
+ ['q.nota','Storia della malattia attuale','a','Esami eseguiti, terapie già provate, accessi in PS','W']
+];
+
+var ANAM=[
+ ['a.com','Comorbidità','m',['Ipertensione arteriosa','Diabete mellito','Dislipidemia','Cardiopatia ischemica','Fibrillazione atriale','Scompenso cardiaco','Pregresso ictus / TIA','BPCO / asma','Insufficienza renale','Epatopatia','Obesità','Coagulopatia','Neoplasia pregressa o attiva','Patologia psichiatrica'],'k'],
+ ['a.apr','Altre patologie e interventi pregressi','a','es. colecistectomia 2015, ipotiroidismo','k'],
+ ['a.fumo','Fumo','s',['Non fumatore','Ex fumatore','Fumatore attivo'],'k'],
+ ['a.alcol','Alcol','s',['Astemio','Occasionale','Abituale','Abuso'],'k'],
+ ['a.all','Allergie','t','es. nessuna allergia nota','k'],
+ ['a.fam','Anamnesi familiare','t','','k'],
+ ['a.lav','Attività lavorativa','t','','k'],
+ ['a.aut','Autonomia nelle attività quotidiane','s',['Autonomo','Parzialmente dipendente','Dipendente']],
+ ['a.peso','Peso (kg)','n','','k'],
+ ['a.alt','Altezza (cm)','n','','k'],
+ ['a.bmi','BMI','c',function(S){var p=num(S['a.peso']),h=num(S['a.alt'])/100;return p&&h?Math.round(p/h/h*10)/10:''}],
+ ['a.asa','Classe ASA','s',['I','II','III','IV','V']]
+];
+
+var TER=[
+ ['t.aa','Antiaggreganti','m',['Acido acetilsalicilico','Clopidogrel','Ticagrelor','Prasugrel'],'k'],
+ ['t.ac','Anticoagulanti','m',['Warfarin','Apixaban','Rivaroxaban','Edoxaban','Dabigatran','EBPM'],'k'],
+ ['t.sosp','Sospensione antitrombotici (farmaco, ultima dose)','t','es. apixaban sospeso il 28/10','W'],
+ ['t.ster','Corticosteroidi','s',['No','Desametasone','Prednisone','Altro'],'k'],
+ ['t.sterd','Dose del corticosteroide','t','es. 4 mg x 2/die','k'],
+ ['t.aed','Antiepilettici','m',['Levetiracetam','Lacosamide','Valproato','Carbamazepina','Oxcarbazepina','Lamotrigina','Fenitoina','Altro'],'k'],
+ ['t.an','Analgesici','m',['Paracetamolo','FANS','Oppioidi','Pregabalin / gabapentin','Miorilassanti'],'k'],
+ ['t.dom','Terapia domiciliare (elenco completo)','a','','kW'],
+ ['t.imp','Terapia impostata / modifiche','a','','W']
+];
+
+var DEC=[
+ ['o.dint','Data dell\'intervento','d','','kP'],
+ ['o.gpo','Giorni dall\'intervento','c',function(S){var a=S['o.dint'],b=S['d.date'];if(!a||!b)return '';var d=Math.round((Date.parse(b)-Date.parse(a))/864e5);return d>=0?d:''},'P'],
+ ['o.proc','Intervento eseguito','t','es. microdiscectomia L4–L5 sinistra','kP'],
+ ['o.comp','Complicanze','m',['Nessuna','Ematoma','Infezione della ferita','Meningite / ventricolite','Fistola liquorale','Nuovo deficit neurologico','Peggioramento del deficit','Crisi epilettiche','Idrocefalo','Pneumocefalo','Iponatriemia','Diabete insipido','TVP / embolia polmonare','Polmonite','Infezione urinaria','Delirium','Malposizionamento dei mezzi di sintesi'],'P'],
+ ['o.cd','Gravità della complicanza (Clavien-Dindo)','s',['I','II','IIIa','IIIb','IVa','IVb','V'],'P'],
+ ['o.reop','Reintervento','s',SN,'P'],
+ ['o.reopn','Motivo del reintervento','t','','P'],
+ ['o.ldeg','Giorni di degenza','n','','D'],
+ ['o.dest','Destinazione alla dimissione','s',['Domicilio','Riabilitazione','Altro reparto','Lungodegenza / RSA','Hospice','Decesso'],'D'],
+ ['o.fum','Controllo a','s',['1 mese','3 mesi','6 mesi','12 mesi','24 mesi','Oltre 24 mesi'],'F'],
+ ['o.esito','Rispetto al pre-operatorio','s',['Migliorato','Invariato','Peggiorato'],'P'],
+ ['o.lav','Ritorno al lavoro','s',['Sì','No','Non applicabile'],'F']
+];
+
+/* g gruppo · s nome breve (scheda e foglio Excel, max 31 caratteri) · tpl modello d'esame proposto */
+var CAT=[
+{id:'ipo',g:'Oncologia cranica',l:'Adenoma ipofisario',s:'Adenoma ipofisario',tpl:'cran',f:[
+ ['-','Diagnosi','h'],
+ ['tipo','Tipo','l',['Non funzionante','Prolattinoma','GH (acromegalia)','ACTH (Cushing)','TSH','Plurisecernente','Da definire'],'k'],
+ ['dim','Dimensioni','s',['Microadenoma (<10 mm)','Macroadenoma (10–40 mm)','Gigante (>40 mm)'],'k'],
+ ['dmax','Diametro massimo (mm)','n','','k'],
+ ['knosp','Knosp','s',['0','1','2','3A','3B','4'],'k'],
+ ['chiasma','Rapporto con il chiasma','s',['Distante','Contatto','Compressione'],'k'],
+ ['apo','Apoplessia','s',SN,'k'],
+ ['-','Funzione visiva ed endocrina','h'],
+ ['cv','Campo visivo','s',['Normale','Quadrantopsia bitemporale','Emianopsia bitemporale','Deficit monoculare','Non valutabile']],
+ ['vod','Visus OD (/10)','t'],
+ ['vos','Visus OS (/10)','t'],
+ ['ipop','Deficit ipofisari','m',['Iposurrenalismo','Ipotiroidismo','Ipogonadismo','Deficit di GH','Diabete insipido']],
+ ['prl','Prolattina (ng/mL)','n'],
+ ['endo','Altri dati endocrini','t','es. IGF-1, cortisolo, fT4'],
+ ['-','Intervento','h'],
+ ['via','Via chirurgica','s',['Endoscopica endonasale','Microscopica transsfenoidale','Transcranica'],'k'],
+ ['eor','Exeresi','s',EOR,'kP'],
+ ['di','Diabete insipido post-operatorio','s',['No','Transitorio','Permanente'],'P'],
+ ['siadh','Iponatriemia / SIADH','s',SN,'P'],
+ ['fist','Fistola liquorale','s',SN,'P'],
+ ['remiss','Remissione endocrina (adenomi secernenti)','s',['Sì','No','Non applicabile'],'F']]},
+
+{id:'gli',g:'Oncologia cranica',l:'Glioma',s:'Glioma',tpl:'compl',f:[
+ ['-','Diagnosi (classificazione WHO CNS 2021)','h'],
+ ['isto','Istotipo','l',['Glioblastoma, IDH-wildtype (grado 4)','Astrocitoma, IDH-mutato, grado 2','Astrocitoma, IDH-mutato, grado 3','Astrocitoma, IDH-mutato, grado 4','Oligodendroglioma, IDH-mutato e 1p/19q-codeleto, grado 2','Oligodendroglioma, IDH-mutato e 1p/19q-codeleto, grado 3','Glioma diffuso della linea mediana, H3 K27-alterato','Astrocitoma pilocitico (grado 1)','Xantoastrocitoma pleomorfo','Ganglioglioma','Ependimoma','Sospetto glioma di basso grado (istologico in attesa)','Sospetto glioma di alto grado (istologico in attesa)'],'k'],
+ ['idh','IDH','s',['Mutato','Wild-type','Non disponibile'],'k'],
+ ['mgmt','MGMT','s',['Metilato','Non metilato','Non disponibile'],'k'],
+ ['codel','1p/19q','s',['Codeleto','Non codeleto','Non disponibile'],'k'],
+ ['ki67','Ki-67 (%)','n','','k'],
+ ['mol','Altri marcatori','t','es. ATRX perso, TERT mutato, EGFR amplificato','k'],
+ ['-','Imaging','h'],
+ ['sede','Sede','m',SEDE,'k'],
+ ['lato','Lato','s',LATOM,'k'],
+ ['eloq','Area eloquente','s',SN,'k'],
+ ['dmax','Diametro massimo (mm)','n','','k'],
+ ['vol','Volume pre-operatorio (cm³)','n','','k'],
+ ['ce','Captazione di contrasto','s',SN,'k'],
+ ['epi','Epilessia all\'esordio','s',SN,'k'],
+ ['-','Intervento','h'],
+ ['proc','Procedura','s',['Biopsia stereotassica','Resezione','Resezione in awake'],'k'],
+ ['adj','Supporti intraoperatori','m',['Neuronavigazione','Monitoraggio neurofisiologico','Mapping corticale / sottocorticale','5-ALA (fluorescenza)','Ecografia intraoperatoria','RM intraoperatoria'],'k'],
+ ['eor','Estensione della resezione','s',['Totale (GTR)','Subtotale (STR)','Parziale','Sola biopsia'],'kP'],
+ ['res','Residuo (cm³)','n','','kP'],
+ ['-','Follow-up','h'],
+ ['adiuv','Terapia adiuvante','s',['RT + temozolomide (Stupp)','Solo radioterapia','Solo chemioterapia','Osservazione','Altro'],'kF'],
+ ['prog','Progressione','s',SN,'F'],
+ ['progd','Data della progressione','d','','F']]},
+
+{id:'men',g:'Oncologia cranica',l:'Meningioma',s:'Meningioma',tpl:'compl',f:[
+ ['-','Diagnosi','h'],
+ ['sede','Sede','l',['Convessità','Parasagittale / falcale','Solco olfattorio','Tuberculum sellae / planum','Ala sfenoidale','Seno cavernoso','Petroclivale','Angolo ponto-cerebellare','Tentoriale','Forame magno','Intraventricolare','Altro'],'k'],
+ ['lato','Lato','s',LATOM,'k'],
+ ['dmax','Diametro massimo (mm)','n','','k'],
+ ['edema','Edema peritumorale','s',['Assente','Lieve','Marcato'],'k'],
+ ['seno','Seno venoso','s',['Non coinvolto','Invasione parziale','Occluso'],'k'],
+ ['iper','Iperostosi','s',SN,'k'],
+ ['epi','Epilessia all\'esordio','s',SN,'k'],
+ ['-','Intervento','h'],
+ ['emb','Embolizzazione pre-operatoria','s',SN,'k'],
+ ['simp','Simpson','s',['I','II','III','IV','V'],'kP'],
+ ['who','Grado WHO','s',['1','2','3'],'kP'],
+ ['ki67','Ki-67 (%)','n','','kP'],
+ ['-','Follow-up','h'],
+ ['rt','Radioterapia','s',SN,'kF'],
+ ['recid','Recidiva / progressione','s',SN,'F']]},
+
+{id:'met',g:'Oncologia cranica',l:'Metastasi cerebrali',s:'Metastasi cerebrali',tpl:'compl',f:[
+ ['-','Diagnosi','h'],
+ ['prim','Tumore primitivo','l',['Polmone','Mammella','Melanoma','Rene','Colon-retto','Altro','Primitivo ignoto'],'k'],
+ ['num','Numero di lesioni','s',['Singola','2–4','5 o più'],'k'],
+ ['sede','Sede della lesione principale','m',SEDE,'k'],
+ ['lato','Lato','s',LATOM,'k'],
+ ['dmax','Diametro massimo (mm)','n','','k'],
+ ['edema','Edema perilesionale','s',['Assente','Lieve','Marcato'],'k'],
+ ['extra','Malattia extracranica','s',['Assente','Stabile / controllata','In progressione'],'k'],
+ ['gpa','GPA (punteggio)','t','','k'],
+ ['-','Trattamento','h'],
+ ['proc','Trattamento','m',['Resezione chirurgica','Radiochirurgia','Radioterapia sul letto chirurgico','Panencefalica (WBRT)','Terapia sistemica','Terapia di supporto'],'k'],
+ ['eor','Exeresi','s',EOR,'kP'],
+ ['-','Follow-up','h'],
+ ['recl','Recidiva locale','s',SN,'F'],
+ ['newl','Nuove lesioni','s',SN,'F']]},
+
+{id:'onc',g:'Oncologia cranica',l:'Altra neoplasia cranica',s:'Altra neoplasia cranica',tpl:'compl',f:[
+ ['tipo','Tipo','l',['Schwannoma vestibolare','Craniofaringioma','Ependimoma','Medulloblastoma','Linfoma','Emangioblastoma','Epidermoide / dermoide','Cordoma / condrosarcoma','Tumore della regione pineale','Altro'],'k'],
+ ['tipon','Specifica / istologico','t','','k'],
+ ['sede','Sede','t','','k'],
+ ['lato','Lato','s',LATOM,'k'],
+ ['dmax','Diametro massimo (mm)','n','','k'],
+ ['koos','Koos (schwannoma vestibolare)','s',['I','II','III','IV'],'k'],
+ ['hb','House-Brackmann (VII nervo cranico)','s',['I','II','III','IV','V','VI']],
+ ['gr','Udito (Gardner-Robertson)','s',['I','II','III','IV','V']],
+ ['proc','Intervento / trattamento','t','','k'],
+ ['eor','Exeresi','s',EOR,'kP'],
+ ['who','Grado WHO','s',['1','2','3','4'],'kP']]},
+
+{id:'cc',g:'Oncologia cranica',l:'Cisti colloide',s:'Cisti colloide',tpl:'cran',f:[
+ ['dmax','Diametro massimo (mm)','n','','k'],
+ ['idro','Idrocefalo','s',['Assente','Presente'],'k'],
+ ['acuto','Presentazione acuta','s',SN,'k'],
+ ['proc','Procedura','s',['Endoscopica','Transcallosa','Transcorticale','Sola derivazione'],'k'],
+ ['eor','Exeresi','s',EOR,'kP'],
+ ['recid','Recidiva','s',SN,'F']]},
+
+{id:'bio',g:'Oncologia cranica',l:'Biopsia di lesione cerebrale (agobiopsia)',s:'Agobiopsia',tpl:'cran',f:[
+ ['sede','Sede','m',SEDE,'k'],
+ ['lato','Lato','s',LATOM,'k'],
+ ['dmax','Diametro massimo (mm)','n','','k'],
+ ['ipot','Ipotesi diagnostica','t','es. linfoma o glioma di alto grado','k'],
+ ['tec','Tecnica','s',['Stereotassica con casco','Neuronavigata (frameless)','Robotica','Endoscopica'],'k'],
+ ['diag','Diagnostica','s',SN,'kP'],
+ ['isto','Diagnosi istologica','t','','kP'],
+ ['emo','Emorragia post-biopsia','s',['No','Asintomatica','Sintomatica'],'P']]},
+
+{id:'aneu',g:'Vascolare',l:'Aneurisma intracranico',s:'Aneurisma',tpl:'cran',f:[
+ ['-','Aneurisma','h'],
+ ['sede','Sede','l',['Comunicante anteriore (ACoA)','Cerebrale media (ACM)','Carotide – comunicante posteriore','Carotide – oftalmica','Biforcazione carotidea','Pericallosa (ACA)','Apice della basilare','PICA','SCA','Vertebrale','Altro'],'k'],
+ ['lato','Lato','s',['Destro','Sinistro','Mediano'],'k'],
+ ['dmax','Dimensione massima (mm)','n','','k'],
+ ['coll','Colletto (mm)','n','','k'],
+ ['mult','Aneurismi multipli','s',SN,'k'],
+ ['rott','Stato','s',['Rotto','Non rotto'],'k'],
+ ['-','Emorragia subaracnoidea','h'],
+ ['hh','Hunt-Hess','s',['I','II','III','IV','V'],'k'],
+ ['wfns','WFNS','s',['I','II','III','IV','V'],'k'],
+ ['fisher','Fisher modificata','s',G04,'k'],
+ ['idro','Idrocefalo acuto','s',SN,'k'],
+ ['-','Trattamento','h'],
+ ['tratt','Trattamento','s',['Clipping','Coiling','Coiling assistito (stent / palloncino)','Flow diverter','Osservazione'],'k'],
+ ['occl','Occlusione (Raymond-Roy)','s',['I – completa','II – residuo del colletto','III – residuo dell\'aneurisma'],'kP'],
+ ['vaso','Vasospasmo','s',['No','Angiografico','Sintomatico (DCI)'],'P'],
+ ['shunt','Derivazione permanente necessaria','s',SN,'P'],
+ ['gose','GOS-E','s',['1','2','3','4','5','6','7','8'],'F']]},
+
+{id:'mav',g:'Vascolare',l:'Malformazione artero-venosa (MAV)',s:'MAV',tpl:'cran',f:[
+ ['sede','Sede','t','','k'],
+ ['lato','Lato','s',LATOM,'k'],
+ ['pres','Presentazione','m',['Emorragia','Crisi epilettiche','Cefalea','Deficit focale','Riscontro incidentale'],'k'],
+ ['-','Spetzler-Martin e Lawton-Young','h'],
+ ['size','Dimensione del nidus','s',['<3 cm','3–6 cm','>6 cm'],'k'],
+ ['eloq','Area eloquente','s',SN,'k'],
+ ['ven','Drenaggio venoso profondo','s',SN,'k'],
+ ['sm','Spetzler-Martin (grado)','c',function(S){var p='x.mav.',z={'<3 cm':1,'3–6 cm':2,'>6 cm':3}[S[p+'size']];
+   if(!z||!S[p+'eloq']||!S[p+'ven'])return '';return z+(S[p+'eloq']==='Sì'?1:0)+(S[p+'ven']==='Sì'?1:0)}],
+ ['rott','Stato','s',['Rotta','Non rotta'],'k'],
+ ['diff','Nidus','s',['Compatto','Diffuso'],'k'],
+ ['ly','Lawton-Young supplementare (età dalla data di nascita)','c',function(S,c){var p='x.mav.';
+   if(isNaN(c.age)||!S[p+'rott']||!S[p+'diff'])return '';return (c.age<20?1:c.age<=40?2:3)+(S[p+'rott']==='Non rotta'?1:0)+(S[p+'diff']==='Diffuso'?1:0)}],
+ ['aneu','Aneurismi associati','s',SN,'k'],
+ ['-','Trattamento','h'],
+ ['tratt','Trattamento','m',['Microchirurgia','Embolizzazione','Radiochirurgia','Osservazione'],'k'],
+ ['obl','Obliterazione','s',['Completa','Residuo'],'kP']]},
+
+{id:'cav',g:'Vascolare',l:'Cavernoma',s:'Cavernoma',tpl:'compl',f:[
+ ['sede','Sede','t','es. ponte, lobo temporale destro','k'],
+ ['num','Numero','s',['Singolo','Multipli'],'k'],
+ ['dmax','Diametro massimo (mm)','n','','k'],
+ ['zab','Zabramski','s',['I','II','III','IV'],'k'],
+ ['emo','Emorragia sintomatica','s',SN,'k'],
+ ['epi','Epilessia','s',SN,'k'],
+ ['dva','Anomalia venosa di sviluppo associata','s',SN,'k'],
+ ['tratt','Trattamento','s',['Microchirurgia','Radiochirurgia','Osservazione'],'k'],
+ ['eor','Exeresi','s',['Completa','Residuo'],'kP']]},
+
+{id:'hsdc',g:'Trauma ed emorragie',l:'Ematoma subdurale cronico',s:'Ematoma subdurale cronico',tpl:'compl',f:[
+ ['lato','Lato','s',LATO,'k'],
+ ['spes','Spessore massimo (mm)','n','','k'],
+ ['shift','Shift della linea mediana (mm)','n','','k'],
+ ['naka','Aspetto TC (Nakaguchi)','s',['Omogeneo','Laminare','Separato','Trabecolare'],'k'],
+ ['mark','Markwalder','s',G04,'k'],
+ ['trauma','Trauma riferito','s',['Sì','No','Non noto'],'k'],
+ ['-','Intervento','h'],
+ ['proc','Procedura','s',['Foro di trapano singolo','Doppio foro di trapano','Minicraniotomia','Twist-drill','Embolizzazione dell\'arteria meningea media','Conservativo'],'k'],
+ ['dren','Drenaggio','s',['Subdurale','Sottogaleale','Nessuno'],'k'],
+ ['recid','Recidiva','s',SN,'P'],
+ ['reint','Reintervento per recidiva','s',SN,'P']]},
+
+{id:'tce',g:'Trauma ed emorragie',l:'Trauma cranico',s:'Trauma cranico',tpl:'cran',f:[
+ ['mecc','Meccanismo','t','es. caduta accidentale, incidente stradale','k'],
+ ['gcs0','GCS all\'ingresso','n','','k'],
+ ['pup','Pupille all\'ingresso','s',['Isocoriche e reagenti','Anisocoria','Midriasi bilaterale areattiva'],'k'],
+ ['les','Lesioni','m',['Ematoma epidurale','Ematoma subdurale acuto','Contusioni','ESA traumatica','Emorragia intraventricolare','Danno assonale diffuso','Frattura della volta','Frattura avvallata','Frattura della base'],'k'],
+ ['marsh','Marshall','s',['I','II','III','IV','V','VI'],'k'],
+ ['proc','Trattamento','m',['Craniotomia ed evacuazione','Craniectomia decompressiva','Monitoraggio della PIC','DVE','Conservativo'],'k'],
+ ['gose','GOS-E','s',['1','2','3','4','5','6','7','8'],'F']]},
+
+{id:'nph',g:'Idrocefalo',l:'Idrocefalo cronico – derivazione VP / VA',s:'Idrocefalo cronico',tpl:'compl',f:[
+ ['eziol','Eziologia','s',['Idiopatico (iNPH)','Post-emorragico','Post-traumatico','Post-infettivo','Ostruttivo','Altro'],'k'],
+ ['-','Quadro clinico (iNPH Grading Scale, 0–4 per voce)','h'],
+ ['gm','iNPHGS marcia','s',G04],
+ ['gc','iNPHGS cognitivo','s',G04],
+ ['gu','iNPHGS urinario','s',G04],
+ ['gtot','iNPHGS totale (/12)','c',function(S){return sum(S,['x.nph.gm','x.nph.gc','x.nph.gu'])}],
+ ['mmse','MMSE (/30)','n'],
+ ['w10','Test del cammino 10 m: tempo (s)','n'],
+ ['w10p','Test del cammino 10 m: passi','n'],
+ ['tug','Timed Up and Go (s)','n'],
+ ['-','Imaging e test','h'],
+ ['evans','Indice di Evans','n','','k'],
+ ['desh','DESH','s',SN,'k'],
+ ['tap','Tap test','s',['Positivo','Negativo','Non eseguito'],'k'],
+ ['tapv','Liquor rimosso al tap test (mL)','n','','k'],
+ ['rout','Test di infusione: Rout (mmHg/mL/min)','n','','k'],
+ ['-','Intervento','h'],
+ ['tipo','Procedura','s',['Derivazione ventricolo-peritoneale','Derivazione ventricolo-atriale','Derivazione lombo-peritoneale','Ventricolocisternostomia endoscopica (ETV)'],'k'],
+ ['valv','Valvola (modello)','t','','k'],
+ ['antis','Dispositivo anti-sifone / gravitazionale','s',SN,'k'],
+ ['press','Pressione impostata (cmH₂O)','n','','P'],
+ ['compl','Complicanze della derivazione','m',['Ipodrenaggio','Iperdrenaggio / igroma','Ematoma subdurale','Malfunzionamento','Infezione','Revisione'],'P']]},
+
+{id:'dve',g:'Idrocefalo',l:'Idrocefalo acuto – derivazione ventricolare esterna (DVE)',s:'Idrocefalo acuto - DVE',tpl:'cran',f:[
+ ['causa','Causa','l',['ESA aneurismatica','Emorragia intraventricolare','Emorragia intraparenchimale','Tumore della fossa posteriore','Malfunzionamento di derivazione','Infezione','Trauma','Altro'],'k'],
+ ['gcsp','GCS al posizionamento','n','','k'],
+ ['evans','Indice di Evans','n','','k'],
+ ['-','Procedura','h'],
+ ['lato','Lato','s',LATO,'k'],
+ ['punto','Punto d\'ingresso','s',['Kocher','Frazier','Keen','Altro'],'k'],
+ ['pass','Numero di passaggi','n','','k'],
+ ['pap','Pressione di apertura (cmH₂O)','n','','k'],
+ ['punta','Posizione della punta (TC)','s',['Ottimale','Subottimale','Malposizionata'],'kP'],
+ ['-','Decorso','h'],
+ ['emo','Emorragia lungo il tramite','s',['No','Asintomatica','Sintomatica'],'P'],
+ ['inf','Ventricolite','s',SN,'P'],
+ ['ostr','Ostruzione / sostituzione','s',SN,'P'],
+ ['gg','Giorni di DVE','n','','P'],
+ ['esito','Esito','s',['Rimossa dopo svezzamento','Conversione in derivazione permanente','Decesso'],'P']]},
+
+{id:'ern',g:'Colonna',l:'Ernia discale',s:'Ernia discale',tpl:'lomb',f:[
+ ['reg','Distretto','s',['Lombare','Cervicale','Dorsale'],'k'],
+ ['liv','Livello','m',LIVC.concat(['Dorsale'],LIVL),'k'],
+ ['lato','Lato','s',['Destro','Sinistro','Mediano'],'k'],
+ ['pos','Sede','s',['Centrale','Paramediana','Foraminale','Extraforaminale'],'k'],
+ ['tipo','Tipo','s',['Protrusione','Estrusione','Sequestrata','Recidiva'],'k'],
+ ['rad','Radice coinvolta','t','es. L5 sinistra','k'],
+ ['ce','Sindrome della cauda equina','s',['No','Incompleta','Con ritenzione'],'k'],
+ ['cons','Terapia conservativa precedente','m',['Farmacologica','Fisioterapia','Infiltrazioni','Nessuna'],'k'],
+ ['-','Dolore e disabilità','h'],
+ ['nrsr','NRS rachide (/10)','n'],
+ ['nrsa','NRS arto (/10)','n'],
+ ['odi','ODI / NDI (%)','n'],
+ ['-','Intervento','h'],
+ ['proc','Procedura','s',['Microdiscectomia','Discectomia endoscopica','ACDF','Protesi discale cervicale','Foraminotomia posteriore'],'k'],
+ ['dura','Lesione durale','s',SN,'P'],
+ ['recid','Recidiva','s',SN,'F'],
+ ['macnab','Esito secondo MacNab','s',['Eccellente','Buono','Discreto','Scarso'],'F']]},
+
+{id:'sten',g:'Colonna',l:'Stenosi del canale lombare',s:'Stenosi lombare',tpl:'lomb',f:[
+ ['liv','Livelli','m',LIVL,'k'],
+ ['schiz','Schizas (livello peggiore)','s',['A','B','C','D'],'k'],
+ ['spond','Spondilolistesi degenerativa associata','s',SN,'k'],
+ ['claud','Autonomia di marcia (m)','n'],
+ ['nrsr','NRS rachide (/10)','n'],
+ ['nrsa','NRS arto (/10)','n'],
+ ['odi','ODI (%)','n'],
+ ['proc','Procedura','s',['Laminectomia / flavectomia','Decompressione bilaterale da accesso monolaterale','Distanziatore interspinoso','Decompressione e stabilizzazione'],'k'],
+ ['dura','Lesione durale','s',SN,'P']]},
+
+{id:'mcs',g:'Colonna',l:'Mielopatia cervicale',s:'Mielopatia cervicale',tpl:'cerv',f:[
+ ['liv','Livelli','m',LIVC,'k'],
+ ['causa','Causa','m',['Spondilosi / osteofitosi','Ernia discale','OPLL','Ipertrofia del legamento giallo','Instabilità'],'k'],
+ ['t2','Iperintensità midollare in T2','s',SN,'k'],
+ ['allin','Allineamento','s',['Lordosi','Rettilineizzazione','Cifosi'],'k'],
+ ['mjoa','mJOA (/18)','n'],
+ ['nurick','Nurick','s',['0','1','2','3','4','5']],
+ ['ndi','NDI (%)','n'],
+ ['proc','Procedura','s',['ACDF','Corpectomia anteriore','Laminectomia e stabilizzazione','Laminoplastica','Approccio combinato'],'k'],
+ ['c5','Paralisi C5','s',SN,'P'],
+ ['disf','Disfagia','s',SN,'P']]},
+
+{id:'spl',g:'Colonna',l:'Spondilolistesi',s:'Spondilolistesi',tpl:'lomb',f:[
+ ['liv','Livello','s',['L3–L4','L4–L5','L5–S1','Altro'],'k'],
+ ['wilt','Tipo (Wiltse)','s',['Displastica','Istmica','Degenerativa','Traumatica','Patologica','Iatrogena'],'k'],
+ ['meyer','Meyerding','s',['I','II','III','IV','V'],'k'],
+ ['dyn','Instabilità dinamica (Rx in flesso-estensione)','s',SN,'k'],
+ ['claud','Autonomia di marcia (m)','n'],
+ ['nrsr','NRS rachide (/10)','n'],
+ ['nrsa','NRS arto (/10)','n'],
+ ['odi','ODI (%)','n'],
+ ['proc','Procedura','s',['Sola decompressione','Decompressione e stabilizzazione posteriore','TLIF','PLIF','ALIF','XLIF / OLIF'],'k'],
+ ['tec','Tecnica','s',['Open','Mininvasiva / percutanea'],'k'],
+ ['dura','Lesione durale','s',SN,'P'],
+ ['fus','Fusione radiologica','s',['Sì','No','Non valutata'],'F']]},
+
+{id:'frat',g:'Colonna',l:'Frattura / instabilità vertebrale (stabilizzazione)',s:'Frattura vertebrale',tpl:'compl',f:[
+ ['liv','Livello','t','es. L1','k'],
+ ['eziol','Eziologia','s',['Traumatica','Osteoporotica','Patologica (neoplastica)','Infettiva'],'k'],
+ ['ao','AO Spine','s',['A0','A1','A2','A3','A4','B1','B2','B3','C'],'k'],
+ ['tlics','TLICS','n','','k'],
+ ['asia','ASIA','s',['A','B','C','D','E']],
+ ['proc','Procedura','s',['Stabilizzazione percutanea','Stabilizzazione open','Decompressione e stabilizzazione','Vertebroplastica / cifoplastica','Corsetto'],'k']]},
+
+{id:'spt',g:'Colonna',l:'Tumore spinale',s:'Tumore spinale',tpl:'compl',f:[
+ ['comp','Compartimento','s',['Extradurale','Intradurale extramidollare','Intramidollare'],'k'],
+ ['isto','Istotipo','l',['Metastasi','Meningioma','Schwannoma / neurofibroma','Ependimoma','Astrocitoma','Emangioblastoma','Mieloma / plasmocitoma','Cordoma','Altro'],'k'],
+ ['liv','Livello','t','','k'],
+ ['sins','SINS','n','','k'],
+ ['bilsky','Bilsky (compressione epidurale)','s',['0','1a','1b','1c','2','3'],'k'],
+ ['mcc','McCormick','s',['I','II','III','IV','V']],
+ ['asia','ASIA','s',['A','B','C','D','E']],
+ ['proc','Procedura','s',['Exeresi','Decompressione e stabilizzazione','Biopsia','Vertebroplastica','Radioterapia / SBRT'],'k'],
+ ['eor','Exeresi','s',EOR,'kP']]},
+
+{id:'seeg',g:'Funzionale',l:'Epilessia farmacoresistente (SEEG)',s:'Epilessia - SEEG',tpl:'cran',f:[
+ ['crisi','Tipo di crisi','m',['Focali consapevoli','Focali con alterazione della consapevolezza','Focali evolventi in bilaterali tonico-cloniche'],'k'],
+ ['freq','Frequenza delle crisi','t','es. 4 al mese'],
+ ['naed','Antiepilettici provati (n.)','n','','k'],
+ ['rm','RM','s',['Lesionale','Non lesionale'],'k'],
+ ['les','Lesione','t','es. displasia corticale focale','k'],
+ ['ipot','Ipotesi di zona epilettogena','t','es. temporale mesiale sinistra','k'],
+ ['nel','Elettrodi impiantati (n.)','n','','kP'],
+ ['zona','Zona epilettogena identificata','t','','kP'],
+ ['tratt','Trattamento successivo','s',['Resezione','Termocoagulazione (RF-TC)','Ablazione laser (LITT)','Neuromodulazione (VNS / DBS / RNS)','Non candidabile'],'kP'],
+ ['engel','Engel','s',['IA','IB','IC','ID','II','III','IV'],'F']]},
+
+{id:'trig',g:'Funzionale',l:'Nevralgia trigeminale',s:'Nevralgia trigeminale',tpl:'cran',f:[
+ ['lato','Lato','s',LATO,'k'],
+ ['branche','Branche','m',['V1','V2','V3'],'k'],
+ ['tipo','Tipo','s',['Classica','Secondaria','Idiopatica'],'k'],
+ ['nvc','Conflitto neurovascolare alla RM','s',SN,'k'],
+ ['farm','Terapia farmacologica','m',['Carbamazepina','Oxcarbazepina','Gabapentin / pregabalin','Baclofen','Altro'],'k'],
+ ['bnip','BNI dolore','s',['I','II','IIIa','IIIb','IV','V']],
+ ['proc','Procedura','s',['Compressione percutanea con palloncino','Termorizotomia a radiofrequenza','Rizolisi con glicerolo','Decompressione microvascolare','Radiochirurgia'],'k'],
+ ['bnin','BNI ipoestesia','s',['I','II','III','IV'],'P'],
+ ['recid','Recidiva del dolore','s',SN,'F']]},
+
+{id:'pump',g:'Funzionale',l:'Pompa intratecale (infusore)',s:'Pompa intratecale',tpl:'compl',f:[
+ ['ind','Indicazione','s',['Spasticità','Dolore oncologico','Dolore cronico non oncologico','Distonia'],'k'],
+ ['farm','Farmaco','s',['Baclofene','Morfina','Ziconotide','Altro'],'k'],
+ ['ash','Ashworth modificata','s',['0','1','1+','2','3','4']],
+ ['nrs','NRS (/10)','n'],
+ ['test','Test intratecale','s',['Positivo','Negativo','Non eseguito'],'k'],
+ ['dose','Dose giornaliera','t','','k'],
+ ['proc','Procedura','s',['Primo impianto','Sostituzione della pompa','Revisione del catetere','Ricarica / regolazione'],'k'],
+ ['compl','Complicanze del sistema','s',['No','Malfunzionamento del catetere','Infezione','Fistola liquorale'],'P']]},
+
+{id:'altro',g:'Altro',l:'Altra patologia',s:'Altro',tpl:'compl',f:[
+ ['dx','Patologia','t','','k'],
+ ['proc','Procedura','t','','k'],
+ ['note','Note','a','','W']]}
+];
+
+return {VT:VT,QUAD:QUAD,ANAM:ANAM,TER:TER,DEC:DEC,CAT:CAT};
+})();

@@ -26,13 +26,16 @@ function openDB(){return new Promise(function(res){
   }catch(e){res()}})}
 function getAll(s){return new Promise(function(res){if(!idb)return res([]);
   try{var q=idb.transaction(s).objectStore(s).getAll();q.onsuccess=function(){res(q.result||[])};q.onerror=function(){res([])}}catch(e){res([])}})}
-function put(s,o){if(!idb)return;try{var tx=idb.transaction(s,'readwrite');tx.objectStore(s).put(o);tx.onerror=storeErr}catch(e){storeErr()}}
+function put(s,o){if(!idb)return;try{var tx=idb.transaction(s,'readwrite');tx.objectStore(s).put(o);tx.oncomplete=savedMark;tx.onerror=storeErr}catch(e){storeErr()}}
+function savedMark(){var el=$('saved'),d=new Date();if(!el)return;el.className='saved';
+  el.textContent='✓ Salvato sull\'iPad alle '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function savingMark(){var el=$('saved');if(el){el.className='saved pending';el.textContent='Salvataggio…'}}
 function del(s,id){if(!idb)return;try{idb.transaction(s,'readwrite').objectStore(s).delete(id)}catch(e){storeErr()}}
 function banner(t){var b=$('banner');b.hidden=!t;b.textContent=t||''}
 function storeErr(){banner('Errore di salvataggio: esporta subito un backup.')}
 var tv=0,tp=0;
-function saveV(){if(!V)return;V.updated=Date.now();clearTimeout(tv);tv=setTimeout(function(){tv=0;put('vis',V)},300)}
-function saveP(){if(!P)return;P.updated=Date.now();clearTimeout(tp);tp=setTimeout(function(){tp=0;put('pat',P)},300)}
+function saveV(){if(!V)return;V.updated=Date.now();savingMark();clearTimeout(tv);tv=setTimeout(function(){tv=0;put('vis',V)},300)}
+function saveP(){if(!P)return;P.updated=Date.now();savingMark();clearTimeout(tp);tp=setTimeout(function(){tp=0;put('pat',P)},300)}
 function flush(){if(tv){clearTimeout(tv);tv=0;if(V)put('vis',V)}if(tp){clearTimeout(tp);tp=0;if(P)put('pat',P)}}
 function meta(){try{return JSON.parse(localStorage.getItem('nx-meta')||'{}')}catch(e){return {}}}
 function setMeta(o){try{localStorage.setItem('nx-meta',JSON.stringify(Object.assign(meta(),o)))}catch(e){}}
@@ -562,6 +565,7 @@ function applyTpl(){
 function show(id){
   PANELS.forEach(function(p){$('t-'+p.id).setAttribute('aria-selected',p.id===id);$('p-'+p.id).hidden=p.id!==id});
   if(id==='rep')fillReport();
+  if(V)LASTTAB[V.id]=id;
   var t=$('t-'+id);if(t&&t.scrollIntoView)t.scrollIntoView({block:'nearest',inline:'center'});
   window.scrollTo(0,0);
 }
@@ -598,14 +602,40 @@ function renderHeader(view){
       btn='<button class="btn quiet" type="button" data-act="openpat">← Paziente</button><button class="btn fill" type="button" data-go="rep">Fine visita → Report</button>'}}
   $('htitle').textContent=h;$('hsub').textContent=sub;$('hbtns').innerHTML=btn;
 }
-function go(view){flush();['home','pat','visit'].forEach(function(x){$('v-'+x).hidden=x!==view});$('tabs').hidden=view!=='visit';renderHeader(view);window.scrollTo(0,0)}
+function go(view){flush();['home','pat','visit'].forEach(function(x){$('v-'+x).hidden=x!==view});$('tabs').hidden=view!=='visit';renderHeader(view);drawOpen(view);window.scrollTo(0,0)}
+/* visite aperte: barra fissa per passare da un paziente all'altro durante il giro */
+var OPEN=[],LASTTAB={},LASTY={};
+try{OPEN=JSON.parse(localStorage.getItem('nx-open')||'[]')}catch(e){}
+function saveOpen(){try{localStorage.setItem('nx-open',JSON.stringify(OPEN))}catch(e){}}
+function visById(id){return DB.vis.filter(function(v){return v.id===id})[0]}
+function drawOpen(view){
+  var el=$('openbar');OPEN=OPEN.filter(visById);
+  if(!OPEN.length&&view==='home'){el.hidden=true;el.innerHTML='';return}
+  el.hidden=false;
+  el.innerHTML=(view!=='home'?'<button type="button" class="chip home" data-act="home">☰ Pazienti</button>':'<span class="ob-l">Visite aperte</span>')+
+    OPEN.map(function(id){var v=visById(id),p=patOf(v.pid)||{},on=V&&V.id===id;
+      return '<span class="chip'+(on?' on':'')+'"><button type="button" data-act="openvis" data-id="'+id+'"'+(on?' aria-current="true"':'')+'>'+
+        esc((p.cognome||'(senza nome)')+(p.nome?' '+p.nome.charAt(0)+'.':''))+' <small>'+esc(vt(v.data['d.tipo'],2))+'</small></button>'+
+        '<button type="button" class="x" data-act="closevis" data-id="'+id+'" aria-label="Chiudi la visita dalla barra">×</button></span>'}).join('');
+  var cur=el.querySelector('.chip.on');if(cur&&cur.scrollIntoView)cur.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+function closeVis(id){OPEN=OPEN.filter(function(x){return x!==id});saveOpen();
+  if(V&&V.id===id){var p=P.id;openPat(p)}else drawOpen($('v-home').hidden?($('v-pat').hidden?'visit':'pat'):'home')}
 function dirty(){var b=meta().backup||0;return DB.pat.some(function(p){return (p.updated||0)>b})||DB.vis.some(function(v){return (v.updated||0)>b})}
-function homeHtml(){var m=meta();
-  return '<div class="card"><div class="ph"><div><h2>Pazienti</h2><p class="desc">'+DB.pat.length+' pazienti · '+DB.vis.length+' visite su questo dispositivo.</p></div>'+
+function homeHtml(){var m=meta(),today=DB.vis.filter(function(v){return v.data['d.date']===td()}).sort(function(a,b){return b.updated-a.updated});
+  var nx=DB.vis.filter(function(v){return (v.updated||0)>(m.xlsx||0)}).length;
+  return (today.length?'<div class="card"><h2>Visite di oggi</h2><div class="plist">'+today.map(function(v){var p=patOf(v.pid)||{},c=CAT[v.data['d.cat']];
+     return '<button type="button" class="prow" data-act="openvis" data-id="'+v.id+'"><span class="pn">'+esc(pname(p)+' · '+vt(v.data['d.tipo'],2))+'</span>'+
+       '<span class="pm">'+esc([p.code,c?c.s:'',v.data['d.dx']].filter(Boolean).join(' · '))+'</span></button>'}).join('')+'</div></div>':'')+
+   '<div class="card'+(today.length?' mt':'')+'"><div class="ph"><div><h2>Pazienti</h2><p class="desc">'+DB.pat.length+' pazienti · '+DB.vis.length+' visite su questo dispositivo.</p></div>'+
    '<button class="btn fill" type="button" data-act="newpat">+ Nuovo paziente</button></div>'+
    '<input type="search" id="psearch" placeholder="Cerca per cognome, nome, codice o n. cartella" aria-label="Cerca paziente" value="'+esc(HQ)+'">'+
    '<div id="plist" class="plist"></div></div>'+
-   '<div class="card mt"><h2>Dati ed esportazione</h2>'+
+   '<div class="card mt"><h2>Salvataggio ed Excel</h2>'+
+   '<p class="desc" style="margin-bottom:10px">Ogni dato che inserisci viene <b>salvato automaticamente su questo iPad</b>: puoi chiudere l\'app o cambiare paziente senza perdere nulla. '+
+   'L\'Excel invece <b>non si aggiorna da solo</b>: è una copia che crei con "Esporta Excel" e contiene tutti i dati fino a quel momento.</p>'+
+   '<div class="hint'+(nx?' warn':'')+'">'+(m.xlsx?'Ultimo Excel esportato il '+new Date(m.xlsx).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})+'. ':'Nessun Excel esportato finora. ')+
+   (nx?nx+(nx===1?' visita nuova o modificata non è ancora':' visite nuove o modificate non sono ancora')+' nell\'Excel.':(DB.vis.length?'L\'Excel contiene tutte le visite.':''))+'</div>'+
    (dirty()?'<div class="hint warn">Ci sono dati non ancora salvati in un backup'+(m.backup?' (ultimo: '+new Date(m.backup).toLocaleDateString('it-IT')+')':'')+'. Se l\'app viene eliminata o l\'iPad si guasta, i dati si perdono: fai un backup e salvalo in File o OneDrive.</div>':'')+
    '<div class="acts"><button class="btn" type="button" data-act="xlsx">Esporta Excel</button><button class="btn" type="button" data-act="xlsx-anon">Excel senza anagrafica</button>'+
    '<button class="btn" type="button" data-act="backup">Backup (.json)</button><button class="btn quiet" type="button" data-act="restore">Ripristina backup</button></div>'+
@@ -643,8 +673,8 @@ function patHtml(){var vs=visitsOf(P.id);
    '<div class="foot"><span></span><button type="button" class="btn danger" data-act="delpat" data-arm>Elimina paziente e visite</button></div>';
 }
 function cleanEmpty(){if(P&&!P.cognome&&!P.nome&&!P.nascita&&!visitsOf(P.id).length){DB.pat=DB.pat.filter(function(p){return p!==P});del('pat',P.id)}}
-function openHome(){flush();cleanEmpty();P=null;V=null;S={};$('v-home').innerHTML=homeHtml();drawPList();go('home')}
-function openPat(id){flush();V=null;S={};P=patOf(id);var l=visitsOf(id)[0];NEWV={tipo:l?'':'pre',cat:l?l.data['d.cat']:''};
+function openHome(){if(V)LASTY[V.id]=window.scrollY;flush();cleanEmpty();P=null;V=null;S={};$('v-home').innerHTML=homeHtml();drawPList();go('home')}
+function openPat(id){if(V)LASTY[V.id]=window.scrollY;flush();V=null;S={};P=patOf(id);var l=visitsOf(id)[0];NEWV={tipo:l?'':'pre',cat:l?l.data['d.cat']:''};
   $('v-pat').innerHTML=patHtml();go('pat')}
 function nextCode(){var m=0;DB.pat.forEach(function(p){var n=parseInt(String(p.code).replace(/\D/g,''),10);if(n>m)m=n});return 'NCH-'+String(m+1).padStart(4,'0')}
 function newPat(){var t=Date.now();P={id:uid(),code:nextCode(),cognome:'',nome:'',nascita:'',sesso:'',cartella:'',note:'',created:t,updated:t};
@@ -658,10 +688,11 @@ function newVisit(){
   var m=0;vs.forEach(function(v){var n=parseInt(String(v.code).split('-V')[1],10);if(n>m)m=n});
   var t=Date.now();V={id:uid(),pid:P.id,code:P.code+'-V'+(m+1),created:t,updated:t,data:d};if(copied)V.copied=copied;
   DB.vis.push(V);put('vis',V);openVisit(V.id,copied?'quad':'anam')}
-function openVisit(id,tab){flush();V=DB.vis.filter(function(v){return v.id===id})[0];if(!V)return;P=patOf(V.pid);S=V.data;
+function openVisit(id,tab){if(V)LASTY[V.id]=window.scrollY;flush();V=visById(id);if(!V)return;P=patOf(V.pid);S=V.data;
+  if(OPEN.indexOf(id)<0){OPEN.push(id);if(OPEN.length>10)OPEN.shift();saveOpen()}
   $('tabs').innerHTML=PANELS.map(function(p){return '<button type="button" class="tab" role="tab" id="t-'+p.id+'" data-go="'+p.id+'" aria-selected="false">'+p.label+'</button>'}).join('');
   $('panels').innerHTML=PANELS.map(function(p){return '<section id="p-'+p.id+'" role="tabpanel" aria-labelledby="t-'+p.id+'" hidden></section>'}).join('');
-  go('visit');applyTpl();show(tab||'vis')}
+  go('visit');applyTpl();show(tab||LASTTAB[id]||'vis');if(!tab&&LASTY[id])window.scrollTo(0,LASTY[id])}
 function delVisit(id){DB.vis=DB.vis.filter(function(v){return v.id!==id});del('vis',id);openPat(P.id)}
 function delPat(){visitsOf(P.id).forEach(function(v){del('vis',v.id)});DB.vis=DB.vis.filter(function(v){return v.pid!==P.id});
   DB.pat=DB.pat.filter(function(p){return p!==P});del('pat',P.id);P=null;openHome()}
@@ -719,6 +750,8 @@ function exportXlsx(anon){
     var cc=baseCols(false).concat(specCols(c.f));
     sheets.push({name:c.s,rows:[cc.map(function(x){return x.h})].concat(cv.map(function(v){return rowOfV(cc,v)}))})});
   deliver(window.XLSXW.build(sheets),'NeurosurgClinic_'+(anon?'anonimo_':'')+td()+'.xlsx');
+  if(!anon){setMeta({xlsx:Date.now()});
+    setTimeout(function(){if(!$('v-home').hidden){$('v-home').innerHTML=homeHtml();drawPList();$('hmsg').textContent='Excel creato con '+vs.length+' visite: salvalo in File o OneDrive.'}},600)}
 }
 function backup(){
   flush();
@@ -752,7 +785,7 @@ function arm(el){var t=el.textContent,wasDanger=el.classList.contains('danger');
 function doAct(el){var a=el.dataset.act,id=el.dataset.id;
   if(el.hasAttribute('data-arm')&&!el.dataset.armed){arm(el);return}
   if(a==='home')openHome();else if(a==='newpat')newPat();else if(a==='openpat')openPat(id||P.id);
-  else if(a==='newvis')newVisit();else if(a==='openvis')openVisit(id);else if(a==='delvis')delVisit(id);else if(a==='delpat')delPat();
+  else if(a==='newvis')newVisit();else if(a==='openvis'){if(!V||V.id!==id)openVisit(id)}else if(a==='closevis')closeVis(id);else if(a==='delvis')delVisit(id);else if(a==='delpat')delPat();
   else if(a==='xlsx')exportXlsx(false);else if(a==='xlsx-anon')exportXlsx(true);else if(a==='backup')backup();
   else if(a==='restore')$('rfile').click();
 }

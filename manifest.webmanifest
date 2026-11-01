@@ -1,0 +1,9 @@
+{
+  "name": "Neurosurg Exam",
+  "short_name": "Neurosurg Exam",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#F2F4F3",
+  "theme_color": "#145F73",
+  "icons": [{"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"}]
+}

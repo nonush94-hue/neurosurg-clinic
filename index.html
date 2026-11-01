@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Neurosurg Exam">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#145F73">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-512.png">
+<style>
+:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}img{max-width:100%}[hidden]{display:none!important}
+</style>
+<title>Neurosurg Exam</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: barra sticky con schede orizzontali, un pannello alla volta, righe Dx/Sx affiancate per l'uso al letto del paziente */
+:root{
+  --bg:#F2F4F3; --surface:#FFFFFF; --ink:#15262E; --muted:#5A6B73; --line:#D5DCDA;
+  --accent:#145F73; --accent-ink:#FFFFFF; --ok:#1E7A55; --ok-ink:#FFFFFF; --alt:#B4412B; --alt-ink:#FFFFFF;
+  --hint:#E4EFF1;
+  --f-sans:'IBM Plex Sans',system-ui,-apple-system,sans-serif; --f-mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1A1F; --surface:#16252C; --ink:#E6EEF0; --muted:#93A6AD; --line:#28404A;
+    --accent:#5FB3C9; --accent-ink:#0B1A20; --ok:#5DC49A; --ok-ink:#0B1A20; --alt:#F0846B; --alt-ink:#0B1A20;
+    --hint:#1B323A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1A1F; --surface:#16252C; --ink:#E6EEF0; --muted:#93A6AD; --line:#28404A;
+  --accent:#5FB3C9; --accent-ink:#0B1A20; --ok:#5DC49A; --ok-ink:#0B1A20; --alt:#F0846B; --alt-ink:#0B1A20;
+  --hint:#1B323A; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-sans);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+.wrap{max-width:900px;margin:0 auto}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--line);padding-block:10px 0}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-size:19px;font-weight:600;margin:0;letter-spacing:.01em}
+.sub{color:var(--muted);font-size:12.5px}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;padding-block:8px;scrollbar-width:thin}
+.tab{flex:none;white-space:nowrap;min-height:38px;padding:0 12px;border:1px solid transparent;background:none;color:var(--muted);font:500 14px var(--f-sans);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.tab[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.tab .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.tab[aria-selected="true"] .dot{background:var(--accent-ink)}
+main{padding-block:16px max(40px,env(safe-area-inset-bottom,0px))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px}
+.ph{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+h2{font-size:17px;margin:0 0 2px;font-weight:600}
+h3{font-size:13px;margin:20px 0 6px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.desc{color:var(--muted);font-size:13.5px;margin:0}
+.btn{min-height:38px;padding:0 14px;border:1px solid var(--accent);background:none;color:var(--accent);font:500 14px var(--f-sans);border-radius:6px;cursor:pointer}
+.btn.fill{background:var(--accent);color:var(--accent-ink)}
+.btn.quiet{border-color:var(--line);color:var(--muted)}
+.btn.danger{border-color:var(--alt);color:var(--alt)}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:inline-flex;flex-wrap:wrap;gap:4px}
+.seg button{min-height:38px;padding:0 11px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:14px;border-radius:5px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.seg button[aria-pressed="true"][data-t="ok"]{background:var(--ok);border-color:var(--ok);color:var(--ok-ink)}
+.seg button[aria-pressed="true"][data-t="alt"]{background:var(--alt);border-color:var(--alt);color:var(--alt-ink)}
+select,input[type=text],input[type=number],input[type=date],textarea{width:100%;min-height:38px;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:5px;padding:0 9px;font:inherit}
+textarea{padding:8px 9px;min-height:84px;resize:vertical;line-height:1.5}
+select.alt{border-color:var(--alt);color:var(--alt);font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field>span,.side{font-size:12.5px;color:var(--muted);font-weight:500}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row2{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr);gap:8px 12px;padding-block:10px;border-top:1px solid var(--line);align-items:start}
+.row2:first-of-type{border-top:0}
+.lbl{display:flex;flex-direction:column;min-width:0}
+.lbl small{color:var(--muted);font-family:var(--f-mono);font-size:12px}
+.cell{display:flex;flex-direction:column;gap:3px;min-width:0}
+.row2 .wide{grid-column:1/-1}
+.row2 .deg{margin-top:4px}
+.hint{background:var(--hint);border-radius:6px;padding:10px 12px;font-size:14px;margin-block:10px}
+.hint[hidden]{display:none}
+.mono{font-family:var(--f-mono)}
+.foot{display:flex;justify-content:space-between;gap:8px;margin-top:18px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.rep textarea{min-height:220px;font-family:var(--f-mono);font-size:13.5px;line-height:1.55}
+.rep .acts{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 18px}
+.note{font-size:12.5px;color:var(--muted);margin-top:14px}
+details.guide{background:var(--hint);border-radius:6px;padding:0 12px;margin-bottom:14px}
+details.guide summary{cursor:pointer;min-height:40px;display:flex;align-items:center;font-weight:600;font-size:14px;color:var(--accent)}
+details.guide dl{margin:0 0 12px;display:grid;gap:8px;font-size:14px}
+details.guide dt{font-weight:600}
+details.guide dd{margin:0;color:var(--ink)}
+.hbtns{display:flex;gap:8px;flex-wrap:wrap}
+.g-table{width:100%;border-collapse:collapse;font-size:14px}
+.g-wrap{overflow-x:auto}
+.g-table td{padding:8px 10px 8px 0;border-top:1px solid var(--line);vertical-align:top}
+.g-table td:first-child{font-weight:600;white-space:nowrap}
+@media (max-width:560px){
+  .row2{grid-template-columns:1fr 1fr}
+  .row2 .lbl{grid-column:1/-1;flex-direction:row;gap:8px;align-items:baseline}
+  .g-table td:first-child{white-space:normal}
+}
+@media (prefers-reduced-motion:no-preference){.tab,.btn{transition:background .12s,color .12s}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="bar">
+      <div><h1>Neurosurg Exam</h1><div class="sub">Esame neurologico: compila durante la visita, poi genera il report. I dati restano solo in questo dispositivo.</div></div>
+      <div class="hbtns"><button class="btn quiet" id="reset" type="button">Nuovo paziente</button><button class="btn fill" type="button" data-go="rep">Fine esame → Report</button></div>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Sezioni dell'esame"></nav>
+  </header>
+  <main id="panels"></main>
+</div>
+
+<script>
+(function(){
+var KEY='esame-neuro-v1';
+var S={};
+try{Object.assign(S,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+var today=new Date().toISOString().slice(0,10);
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})};
+var cap=function(s){return s.charAt(0).toUpperCase()+s.slice(1)};
+var lc=function(s){return s.charAt(0).toLowerCase()+s.slice(1)};
+var $=function(id){return document.getElementById(id)};
+
+/* ---------- componenti ---------- */
+function seg(k,opts,multi){
+  return '<div class="seg" role="group" data-k="'+k+'"'+(multi?' data-multi="1"':'')+'>'+opts.map(function(o){
+    var a=typeof o==='string'?[o,o,'']:o, v=a[0], on=multi?(S[k]||[]).indexOf(v)>-1:S[k]===v;
+    return '<button type="button" data-v="'+esc(v)+'" data-t="'+(a[2]||'')+'" aria-pressed="'+on+'">'+esc(a[1])+'</button>';
+  }).join('')+'</div>';
+}
+function sel(k,opts,al,ph){
+  return '<select data-k="'+k+'" aria-label="'+esc(al||k)+'"><option value="">'+(ph||'–')+'</option>'+opts.map(function(o){
+    var a=typeof o==='string'?[o,o]:o;
+    return '<option value="'+esc(a[0])+'"'+(S[k]===a[0]?' selected':'')+'>'+esc(a[1])+'</option>';
+  }).join('')+'</select>';
+}
+function inp(k,ph,al,type,extra){
+  return '<input type="'+(type||'text')+'" data-k="'+k+'" placeholder="'+esc(ph||'')+'" aria-label="'+esc(al||ph||k)+'" value="'+esc(S[k]||'')+'" '+(extra||'')+'>';
+}
+function area(k,ph,al){return '<textarea data-k="'+k+'" placeholder="'+esc(ph||'')+'" aria-label="'+esc(al||k)+'">'+esc(S[k]||'')+'</textarea>'}
+function field(label,html){return '<div class="field"><span>'+label+'</span>'+html+'</div>'}
+function two(label,sub,base,mk,extra){
+  return '<div class="row2"><div class="lbl"><b>'+label+'</b>'+(sub?'<small>'+sub+'</small>':'')+'</div>'+
+    ['dx','sx'].map(function(s){return '<div class="cell"><span class="side">'+(s==='dx'?'Dx':'Sx')+'</span>'+mk(base+'.'+s,label+(s==='dx'?' destra':' sinistra'),s)+'</div>'}).join('')+(extra||'')+'</div>';
+}
+function head(id,title,desc,norm){
+  return '<div class="ph"><div><h2>'+title+'</h2><p class="desc">'+desc+'</p></div>'+(norm?'<button class="btn" type="button" data-norm="'+id+'">Tutto nella norma</button>':'')+'</div>'+
+    (GUIDE[id]?'<details class="guide"><summary>Come si esegue</summary><dl>'+GUIDE[id].map(function(g){return '<dt>'+g[0]+'</dt><dd>'+g[1]+'</dd>'}).join('')+'</dl></details>':'');
+}
+var GUIDE={
+ cos:[
+  ['GCS – Occhi (E)','4 spontanea · 3 alla voce · 2 al dolore · 1 nessuna.'],
+  ['GCS – Verbale (V)','5 orientato · 4 confuso · 3 parole inappropriate · 2 suoni incomprensibili · 1 nessuna · T intubato.'],
+  ['GCS – Motoria (M)','6 esegue ordini · 5 localizza il dolore · 4 retrae · 3 flessione anomala (decorticazione) · 2 estensione (decerebrazione) · 1 nessuna. Stimolo centrale (trapezio, sopraorbitario) per la localizzazione; periferico (letto ungueale) per la flessione.'],
+  ['Orientamento','Chiedi data e giorno (tempo), dove si trova (spazio), nome ed età (persona).'],
+  ['Linguaggio','Ascolta l\'eloquio spontaneo; fai denominare 2 oggetti, ripetere una frase, eseguire un ordine semplice e uno a più passaggi.'],
+  ['Neglect','Tocca contemporaneamente i due lati (estinzione); fai bisecare una linea o descrivere la stanza.']],
+ nc:[
+  ['I – Olfatto','Odore noto (caffè) su ciascuna narice a occhi chiusi. Raramente eseguito di routine.'],
+  ['II – Visus e campo visivo','Visus per occhio (lettura, conta dita). Campo visivo per confronto: esaminatore di fronte, un occhio coperto, dita mosse nei 4 quadranti.'],
+  ['Pupille','Diametro in mm e forma; luce diretta e consensuale per ciascun occhio. Anisocoria con midriasi areattiva = urgenza (III NC).'],
+  ['III–IV–VI – Motilità oculare','Segui il dito disegnando una H, testa ferma. Chiedi se vede doppio; osserva ptosi e nistagmo nelle posizioni estreme.'],
+  ['V – Trigemino','Tocca fronte, guancia e mento ai due lati (V1–V2–V3). Fai serrare i denti palpando i masseteri.'],
+  ['VII – Facciale','Alza le sopracciglia, chiudi forte gli occhi, mostra i denti, gonfia le guance. Centrale = risparmia la fronte; periferico = coinvolge tutta l\'emifaccia.'],
+  ['VIII – Acustico','Sfrega le dita vicino a ciascun orecchio; se alterato, Weber e Rinne con diapason.'],
+  ['IX–X','Fai dire "A": velo simmetrico, ugola centrale (devia verso il lato sano). Valuta voce e deglutizione.'],
+  ['XI – Accessorio','Alzare le spalle e ruotare il capo contro resistenza.'],
+  ['XII – Ipoglosso','Lingua fuori: devia verso il lato leso; osserva trofismo e fascicolazioni.']],
+ mot:[
+  ['Tono','Paziente rilassato: mobilizza passivamente gomito, polso e ginocchio, prima lentamente poi rapidamente. Spasticità = resistenza che aumenta con la velocità; rigidità = resistenza costante.'],
+  ['Mingazzini I (arti superiori)','Braccia tese in avanti, palmi in alto, occhi chiusi, per 20–30 s. Positivo se un braccio prona, si abbassa o slivella.'],
+  ['Mingazzini II (arti inferiori)','Supino, anche e ginocchia flesse a 90°, gambe sollevate, per 20–30 s. Positivo se una gamba cade o slivella.'],
+  ['Scala MRC','0 nessuna contrazione · 1 contrazione visibile senza movimento · 2 movimento a gravità eliminata · 3 vince la gravità · 4 vince una resistenza parziale · 5 forza normale.'],
+  ['Tecnica','Stabilizza il segmento prossimale, chiedi il movimento e opponi resistenza; confronta subito con il lato opposto. Se il dolore limita lo sforzo, segna "su base antalgica".']],
+ rif:[
+  ['Tecnica generale','Paziente rilassato, segmento in posizione intermedia. Colpo secco con il martelletto lasciato oscillare dal polso; confronta subito con il controlaterale.'],
+  ['Bicipitale (C5–C6)','Gomito flesso a 90°, appoggia il pollice sul tendine del bicipite e percuoti il pollice.'],
+  ['Stiloradiale (C6)','Avambraccio semiflesso in posizione neutra; percuoti il radio 3–5 cm sopra il polso.'],
+  ['Tricipitale (C7)','Braccio sostenuto, gomito flesso a 90°; percuoti il tendine subito sopra l\'olecrano.'],
+  ['Rotuleo (L3–L4)','Seduto con gambe penzoloni, o supino con ginocchio sostenuto in lieve flessione; percuoti il tendine sotto la rotula.'],
+  ['Achilleo (S1)','Porta il piede in lieve dorsiflessione passiva e percuoti il tendine d\'Achille.'],
+  ['Manovra di Jendrassik','Se i ROT sono ipoevocabili: il paziente aggancia le mani e tira mentre percuoti.'],
+  ['Babinski','Con punta smussa striscia il margine laterale della pianta dal tallone verso le dita, curvando sotto le teste metatarsali. Estensione dell\'alluce = positivo.'],
+  ['Hoffmann','Tieni il dito medio e fai uno scatto sull\'unghia: flessione di pollice e indice = positivo.'],
+  ['Clono','Dorsiflessione rapida del piede, mantenuta. Più di 3–4 battiti sostenuti = patologico.']],
+ sens:[
+  ['Tattile e dolorifica','Cotone e punta smussa (spillo monouso); confronta destra/sinistra e prossimale/distale, a occhi chiusi.'],
+  ['Dermatomeri di riferimento','C6 pollice · C7 dito medio · C8 mignolo · T4 capezzolo · T10 ombelico · L4 malleolo mediale · L5 dorso del piede e alluce · S1 margine laterale del piede · S2–S4 sella.'],
+  ['Sensibilità sellare','Perineo e regione perianale. Da testare sempre se sospetti cauda equina.'],
+  ['Propriocezione e vibratoria','Muovi l\'alluce su/giù a occhi chiusi; diapason 128 Hz sul malleolo.'],
+  ['Coordinazione','Indice-naso, calcagno-ginocchio, movimenti alternati rapidi delle mani.'],
+  ['Romberg','Piedi uniti, braccia lungo i fianchi: occhi aperti, poi chiusi per 30 s. Positivo se perde l\'equilibrio solo a occhi chiusi.'],
+  ['Marcia','Osserva una camminata di 10 m andata e ritorno con giro. Poi punte (S1), talloni (L4–L5) e tandem.'],
+  ['Marce tipiche','Parkinsoniana: a piccoli passi, festinante, tronco flesso, pendolarità ridotta, girata "en bloc". Magnetica (idrocefalo normoteso): piedi che sembrano incollati, base allargata, difficoltà ad avviarsi e nelle rotazioni. Falciante: arto spastico che ruota in fuori. Steppante: piede cadente (L5, SPE).']],
+ seg:[
+  ['Rigidità nucale','Flessione passiva del capo verso lo sterno: resistenza o dolore = positivo.'],
+  ['Kernig e Brudzinski','Kernig: anca a 90°, estendi il ginocchio → dolore o resistenza. Brudzinski: flettendo il capo si flettono le anche.'],
+  ['Lasègue (L5–S1)','Supino, solleva l\'arto esteso dal tallone. Positivo se compare dolore radicolare sotto il ginocchio tra 30° e 70°: annota l\'angolo.'],
+  ['Lasègue crociato','Solleva l\'arto sano: positivo se compare dolore nell\'arto affetto. Suggerisce ernia voluminosa o mediale.'],
+  ['Wassermann (L2–L4)','Prono, estendi l\'anca a ginocchio flesso: dolore alla faccia anteriore della coscia.'],
+  ['Sfinteri','Chiedi di ritenzione, incontinenza e urgenza. Se sospetti cauda equina: tono anale all\'esplorazione rettale e residuo post-minzionale.']]
+};
+
+/* ---------- dati di struttura ---------- */
+var N=[['Normale','Norma','ok'],['Alterato','Alterato','alt']];
+var NC=[
+ ['1','NC I','Olfatto','Olfatto'],['2','NC II','Visus, campo visivo, fundus','Visus/campo visivo'],
+ ['p','NC II–III','Pupille e riflesso fotomotore','Pupille'],['oc','NC III–IV–VI','Motilità oculare, diplopia, ptosi, nistagmo','Motilità oculare'],
+ ['5','NC V','Sensibilità facciale, masseteri, corneale','Trigemino'],['7','NC VII','Mimica facciale','Facciale'],
+ ['8','NC VIII','Udito, vertigine','Acustico-vestibolare'],['9','NC IX–X','Velo, ugola, deglutizione, voce','Glossofaringeo/vago'],
+ ['11','NC XI','Sternocleidomastoideo, trapezio','Accessorio'],['12','NC XII','Lingua','Ipoglosso']
+];
+var M=[
+ ['delt','Deltoide','C5','ul','deltoide'],['bic','Bicipite','C5–C6','ul','bicipite'],['est','Estensori del polso','C6','ul','estensori del polso'],
+ ['tric','Tricipite','C7','ul','tricipite'],['fl','Flessori delle dita','C8','ul','flessori delle dita'],['int','Interossei','T1','ul','interossei'],
+ ['ilio','Ileopsoas (flessione coscia)','L2','ll','flessione della coscia'],['quad','Quadricipite (estensione gamba)','L3','ll','estensione della gamba'],
+ ['ta','Tibiale anteriore (dorsiflessione piede)','L4','ll','dorsiflessione del piede'],['ehl','Estensore lungo alluce','L5','ll','dorsiflessione dell\'alluce'],
+ ['gast','Gastrocnemio (flessione plantare)','S1','ll','flessione plantare']
+];
+var ROT=[['bic','Bicipitale','C5–C6','ul'],['sr','Stiloradiale','C6','ul'],['tric','Tricipitale','C7','ul'],['rot','Rotuleo','L3–L4','ll'],['ach','Achilleo','S1','ll']];
+/* modelli: quali schede e righe mostrare */
+var TPL={
+ compl:{tabs:null,ul:true,ll:true,hof:true,m1:true,ten:true},
+ cran:{tabs:null,ul:true,ll:true,hof:true,m1:true,ten:false},
+ cerv:{tabs:['dati','mot','rif','sens','seg','con','rep','glo'],ul:true,ll:true,hof:true,m1:true,ten:false},
+ lomb:{tabs:['dati','mot','rif','sens','seg','con','rep','glo'],ul:false,ll:true,hof:false,m1:false,ten:true}
+};
+function T(){return TPL[S['d.tpl']]||TPL.compl}
+function visM(){return M.filter(function(m){return T()[m[3]]})}
+function visR(){return ROT.filter(function(r){return T()[r[3]]})}
+function showTab(id){var t=T().tabs;return !t||t.indexOf(id)>-1}
+var GR=[['0','0'],['1','1+'],['2','2+'],['3','3+'],['4','4+']];
+var GRTERM={'0':'assenti','1':'ipoevocabili','3':'vivaci','4':'vivaci con clono'};
+var SCALE=[['asia','ASIA (A–E)'],['mjoa','mJOA (/18)'],['nihss','NIHSS'],['kps','Karnofsky KPS'],['mrs','mRS (0–6)'],['nrs','NRS dolore (/10)'],['odi','ODI / NDI (%)'],['hh','Hunt-Hess / WFNS']];
+
+var PANELS=[
+ {id:'dati',label:'Dati',re:/^d\./},{id:'cos',label:'Coscienza',re:/^c\./},{id:'nc',label:'Nervi cranici',re:/^nc\./},
+ {id:'mot',label:'Motorio',re:/^(m|f)\./},{id:'rif',label:'Riflessi',re:/^r\./},{id:'sens',label:'Sensibilità e marcia',re:/^s\./},
+ {id:'seg',label:'Segni e scale',re:/^g\./},{id:'con',label:'Conclusioni',re:/^z\./},{id:'rep',label:'Report'},{id:'glo',label:'Glossario'}
+];
+
+/* ---------- pannelli ---------- */
+var VIEW={
+dati:function(){return head('dati','Dati generali','Usa iniziali o un codice: nessun nome completo.')+
+ '<div class="stack" style="margin-bottom:14px">'+field('Tipo di esame (mostra solo le sezioni utili)',seg('d.tpl',[['lomb','Lombare'],['cerv','Cervicale'],['cran','Cranico'],['compl','Completo']]))+
+ '<p class="desc">Lombare: arti inferiori, Lasègue, sella e sfinteri. Cervicale: quattro arti, Hoffmann, mielopatia. Cranico: coscienza, GCS, nervi cranici. Il modello resta impostato anche per il paziente successivo.</p></div>'+
+ '<div class="grid">'+
+ field('Paziente (iniziali / ID)',inp('d.id','es. A.F. o ID','Paziente'))+
+ field('Età',inp('d.eta','anni','Età','number','inputmode="numeric" min="0" max="120"'))+
+ field('Sesso',seg('d.sex',['M','F']))+
+ field('Data dell\'esame',inp('d.date','','Data','date'))+
+ field('Contesto',sel('d.ctx',['Pre-operatorio','Post-operatorio','Controllo ambulatoriale','Urgenza / pronto soccorso','Ricovero'],'Contesto'))+
+ field('Lato dominante',seg('d.dom',['Destro','Sinistro']))+
+ '</div><div class="stack" style="margin-top:14px">'+field('Diagnosi / intervento',inp('d.dx','es. ernia discale L4-L5 sx','Diagnosi'))+'</div>';},
+
+cos:function(){return head('cos','Coscienza e funzioni superiori','GCS, vigilanza, orientamento, linguaggio.','cos')+
+ '<div class="cols">'+field('GCS Occhi',sel('c.e',[['4','4'],['3','3'],['2','2'],['1','1']],'GCS occhi'))+
+ field('GCS Verbale',sel('c.v',[['5','5'],['4','4'],['3','3'],['2','2'],['1','1'],['T','T (intubato)']],'GCS verbale'))+
+ field('GCS Motoria',sel('c.m',[['6','6'],['5','5'],['4','4'],['3','3'],['2','2'],['1','1']],'GCS motoria'))+'</div>'+
+ '<div class="stack" style="margin-top:14px">'+
+ field('Vigilanza',seg('c.vig',[['Vigile','Vigile','ok'],['Soporoso','Soporoso','alt'],['Stuporoso','Stuporoso','alt'],['Coma','Coma','alt']]))+
+ field('Collaborazione',seg('c.coop',[['Collaborante','Collaborante','ok'],['Poco collaborante','Poco','alt'],['Non collaborante','Non collaborante','alt']]))+
+ field('Orientamento',seg('c.ori',[['Orientato nei tre parametri','Orientato','ok'],['Disorientato nel tempo','Tempo','alt'],['Disorientato nel tempo e nello spazio','Tempo e spazio','alt'],['Disorientato nei tre parametri','Tutti e tre','alt']]))+
+ field('Linguaggio',seg('c.ling',[['Fluente','Fluente','ok'],['Afasia motoria','Afasia motoria','alt'],['Afasia sensitiva','Afasia sensitiva','alt'],['Afasia globale','Afasia globale','alt'],['Afasia anomica','Anomica','alt']]))+
+ '<div class="grid">'+field('Disartria',seg('c.dis',[['Assente','Assente','ok'],['Presente','Presente','alt']]))+
+ field('Neglect',seg('c.neg',[['Assente','Assente','ok'],['Presente','Presente','alt']]))+'</div>'+
+ field('Note (memoria, attenzione, aprassia, comportamento)',inp('c.nota','','Note funzioni superiori'))+'</div>';},
+
+nc:function(){return head('nc','Nervi cranici','Per ogni lato: Norma o Alterato. Lascia vuoto ciò che non hai valutato.','nc')+
+ NC.map(function(r){return two(r[1],r[2],'nc.'+r[0],function(k,al){return seg(k,N)},
+   '<div class="wide">'+inp('nc.'+r[0]+'.n','Dettaglio (es. paresi facciale periferica, anisocoria 4/2 mm)','Dettaglio '+r[1])+'</div>');}).join('');},
+
+mot:function(){return head('mot','Esame motorio','Tono, trofismo, prove di Mingazzini e forza MRC per segmento.','mot')+
+ '<div class="stack">'+
+ field('Tono',seg('m.tono',[['Normale','Normale','ok'],['Ipotono','Ipotono','alt'],['Spasticità lieve','Spasticità lieve','alt'],['Spasticità moderata/severa','Spasticità mod./severa','alt'],['Rigidità','Rigidità','alt']]))+
+ '<div class="grid">'+field('Trofismo',seg('m.trof',[['Conservato','Conservato','ok'],['Ipotrofia','Ipotrofia','alt']]))+
+ '</div><div class="grid">'+
+ (T().m1?field('Mingazzini I (arti superiori)',seg('m.m1',[['Mantenuto','Mantenuto','ok'],['slivellamento a destra','Slivella dx','alt'],['slivellamento a sinistra','Slivella sx','alt']])):'')+
+ field('Mingazzini II (arti inferiori)',seg('m.m2',[['Mantenuto','Mantenuto','ok'],['slivellamento a destra','Slivella dx','alt'],['slivellamento a sinistra','Slivella sx','alt']]))+'</div>'+
+ field('Deficit di forza',seg('m.antalg',[['antalgica','Su base antalgica']],true))+'</div>'+
+ '<h3>Forza (scala MRC 0–5)</h3><div id="syn" class="hint" hidden></div>'+
+ visM().map(function(m){return two(m[1],m[2],'f.'+m[0],function(k,al){return sel(k,['0','1','2','3','4','5'],al)});}).join('');},
+
+rif:function(){return head('rif','Riflessi e segni piramidali','Gradazione ROT: 0 assente · 1+ ipoevocabile · 2+ normale · 3+ vivace · 4+ con clono.','rif')+
+ '<h3>Riflessi osteotendinei</h3>'+
+ visR().map(function(r){return two(r[1],r[2],'r.'+r[0],function(k,al){return sel(k,GR,al)});}).join('')+
+ '<h3>Segni piramidali</h3>'+
+ two('Babinski','','r.bab',function(k){return seg(k,[['Flessorio','Flessorio','ok'],['Estensorio','Estensorio','alt'],['Indifferente','Indifferente','']])})+
+ (T().hof?two('Hoffmann','','r.hof',function(k){return seg(k,[['Negativo','Neg','ok'],['Positivo','Pos','alt']])}):'')+
+ two('Clono','achilleo / rotuleo','r.clo',function(k){return seg(k,[['Assente','Assente','ok'],['Presente','Presente','alt']])});},
+
+sens:function(){return head('sens','Sensibilità, coordinazione e marcia','Sintomi sensitivi, sensibilità sellare, coordinazione, deambulazione.','sens')+
+ '<div class="stack">'+
+ field('Sensibilità tattile/dolorifica',seg('s.sens',[['Conservata','Conservata','ok'],['Ipoestesia','Ipoestesia','alt'],['Anestesia','Anestesia','alt'],['Iperestesia','Iperestesia','alt']]))+
+ field('Sintomi sensitivi associati',seg('s.sint',['Parestesie','Disestesia','Allodinia','Dolore neuropatico'],true))+
+ '<div class="grid">'+field('Distribuzione',inp('s.dist','es. territorio L5 sx, distale > prossimale','Distribuzione'))+field('Livello sensitivo',inp('s.liv','es. T10','Livello sensitivo'))+'</div>'+
+ '<div class="grid">'+field('Sensibilità sellare',seg('s.sella',[['Conservata','Conservata','ok'],['Ipoestesia','Ipoestesia','alt'],['Anestesia','Anestesia','alt']]))+
+ field('Propriocezione / vibratoria',seg('s.prop',[['Conservata','Conservata','ok'],['Ridotta','Ridotta','alt']]))+'</div>'+
+ '<div class="grid">'+field('Prove di coordinazione',seg('s.coord',[['Corrette','Corrette','ok'],['Dismetria','Dismetria','alt']]))+
+ field('Romberg',seg('s.romb',[['Negativo','Negativo','ok'],['Positivo','Positivo','alt']]))+'</div>'+
+ '<h3>Marcia</h3>'+
+ field('Deambulazione',seg('s.marcia',[['Autonoma','Autonoma','ok'],['Con ausilio','Con ausilio','alt'],['Non possibile','Non possibile','alt']]))+
+ field('Punte e talloni',seg('s.punte',[['Possibile','Possibile','ok'],['Non possibile','Non possibile','alt']]))+
+ field('Caratteristiche',seg('s.tipo',['Antalgica','Camptocormica','Parkinsoniana (festinante)','Magnetica','A piccoli passi','Girata en bloc','Falciante','Steppante','Atassica','A base allargata','Spastica'],true))+'</div>';},
+
+seg:function(){return head('seg','Segni meningei, tensione radicolare, sfinteri e scale','Lasègue e Wassermann: indica anche i gradi se positivo.','seg')+
+ '<div class="stack">'+field('Segni meningei (rigidità nucale, Kernig, Brudzinski)',seg('g.men',[['Assenti','Assenti','ok'],['Presenti','Presenti','alt']]))+'</div>'+
+ (T().ten?'<h3>Segni di tensione radicolare</h3>'+
+ [['Lasègue','las'],['Lasègue crociato','lcr'],['Wassermann','was']].map(function(r){
+   return two(r[0],'','g.'+r[1],function(k){return seg(k,[['Negativo','Neg','ok'],['Positivo','Pos','alt']])+'<div class="deg">'+inp(k+'g','gradi (es. 10-20)','Gradi '+r[0])+'</div>'});}).join(''):'')+
+ '<h3>Sfinteri e rachide</h3><div class="stack">'+
+ field('Sfinteri',seg('g.sf',[['riferiti controllati','Controllati','ok'],['con urgenza minzionale','Urgenza','alt'],['con ritenzione urinaria','Ritenzione','alt'],['con incontinenza','Incontinenza','alt']]))+
+ field('Tono sfinterico anale',seg('g.ton',[['Normale','Normale','ok'],['Ridotto','Ridotto','alt']]))+
+ '<div class="grid">'+field('Rachide (dolore, contrattura, motilità)',inp('g.rach','','Rachide'))+field('Ferita / drenaggi (post-op)',inp('g.fer','','Ferita'))+'</div></div>'+
+ '<h3>Scale</h3><div class="cols">'+SCALE.map(function(s){return field(s[1],inp('g.sc.'+s[0],'','Scala '+s[1]))}).join('')+'</div>';},
+
+con:function(){return head('con','Conclusioni','Confronto con l\'esame precedente, imaging, indicazioni.')+
+ '<div class="stack">'+
+ field('Quadro clinico / sintomo principale (apre il testo del report)',area('z.sx','es. Lombosciatalgia sinistra irradiata in territorio L5','Quadro clinico'))+
+ '<div class="grid">'+field('Rispetto all\'esame precedente',seg('z.conf',['Invariato','Migliorato','Peggiorato']))+field('Data esame precedente',inp('z.confd','','Data esame precedente','date'))+'</div>'+
+ field('Dettaglio del confronto',inp('z.confn','es. peggioramento della destrezza manuale sx','Dettaglio confronto'))+
+ field('Correlazione con l\'imaging',area('z.img','','Imaging'))+
+ field('Indicazioni',area('z.ind','es. rivalutazione ogni 4 ore, TC di controllo','Indicazioni'))+
+ field('Firma',inp('z.firma','','Firma'))+'</div>';},
+
+rep:function(){return head('rep','Report','Generato dai dati inseriti: solo le voci compilate. Puoi modificare il testo prima di copiarlo.')+
+ '<div class="rep"><div class="acts"><button class="btn fill" type="button" id="regen">Aggiorna dai dati</button></div>'+
+ '<h3>Testo per cartella (paragrafo unico)</h3><textarea id="rep1" aria-label="Testo per cartella"></textarea>'+
+ '<div class="acts"><button class="btn" type="button" data-copy="rep1">Copia testo</button></div>'+
+ '<h3>Referto strutturato</h3><textarea id="rep2" style="min-height:340px" aria-label="Referto strutturato"></textarea>'+
+ '<div class="acts"><button class="btn" type="button" data-copy="rep2">Copia referto</button></div>'+
+ '<p class="note">Rileggi sempre il testo prima di inserirlo in cartella: il report riporta solo ciò che hai inserito.</p></div>';},
+
+glo:function(){return head('glo','Glossario','-paresi = deficit parziale (MRC 1–4/5) · -plegia = deficit completo (0/5).')+
+ '<div class="field" style="margin-bottom:8px"><input type="text" id="gsearch" placeholder="Cerca un termine (es. emiparesi, disestesia, Hoffmann)" aria-label="Cerca nel glossario"></div><div id="gout" class="g-wrap"></div>';}
+};
+
+var G=[
+['Deficit motorio','Monoparesi / monoplegia','Un solo arto (parziale / completo). Es. monoparesi crurale sinistra: radicolopatia, lesione parasagittale'],
+['Deficit motorio','Emiparesi / emiplegia','Metà del corpo: arto superiore e inferiore dello stesso lato, spesso con la faccia. Lesione emisferica controlaterale'],
+['Deficit motorio','Paraparesi / paraplegia','Entrambi gli arti inferiori. Lesione midollare toracica o lombare, cauda equina'],
+['Deficit motorio','Tetraparesi / tetraplegia','Tutti e quattro gli arti. Lesione midollare cervicale'],
+['Deficit motorio','Diparesi brachiale','Entrambi gli arti superiori (es. sindrome centromidollare)'],
+['Deficit motorio','Emiparesi crociata','Deficit dei nervi cranici da un lato, degli arti dal lato opposto: lesione del tronco encefalico'],
+['Deficit motorio','Brachiale / crurale','Prevalenza all\'arto superiore / inferiore'],
+['Deficit motorio','Faciobrachiale','Faccia e arto superiore: lesione corticale o capsulare'],
+['Sensibilità','Ipoestesia / anestesia','Sensibilità ridotta / assente'],
+['Sensibilità','Iperestesia','Sensibilità aumentata'],
+['Sensibilità','Parestesie','Formicolii spontanei, non dolorosi'],
+['Sensibilità','Disestesia','Sensazione anomala e spiacevole, anche da stimolo normale'],
+['Sensibilità','Allodinia','Dolore da uno stimolo normalmente non doloroso'],
+['Sensibilità','Iperalgesia','Dolore eccessivo da uno stimolo doloroso'],
+['Sensibilità','Anestesia a sella','Perdita di sensibilità perineale e perianale: segno di cauda equina'],
+['Sensibilità','Emianestesia','Perdita della sensibilità di metà corpo'],
+['Sensibilità','Livello sensitivo','Dermatomero sotto cui la sensibilità è alterata (lesione midollare)'],
+['Tono e riflessi','Spasticità','Ipertono velocità-dipendente, a "lama di coltello": lesione del 1° motoneurone'],
+['Tono e riflessi','Rigidità','Ipertono costante, a "tubo di piombo" o a ruota dentata: sindromi extrapiramidali'],
+['Tono e riflessi','Ipotono / flaccidità','Tono ridotto: lesione del 2° motoneurone, fase acuta'],
+['Tono e riflessi','Iperreflessia','ROT vivaci, con eventuale clono'],
+['Tono e riflessi','Areflessia / iporeflessia','ROT assenti / ridotti'],
+['Tono e riflessi','Segno di Babinski','Estensione dell\'alluce alla stimolazione plantare: lesione piramidale'],
+['Tono e riflessi','Segno di Hoffmann','Flessione di pollice e indice dopo flick del 3° dito: lesione piramidale cervicale'],
+['Tono e riflessi','Clono','Contrazioni ritmiche da stiramento rapido (piede, rotula)'],
+['Tono e riflessi','1° motoneurone (piramidale)','Forza ridotta, tono aumentato, ROT vivaci, trofismo conservato, Babinski presente'],
+['Tono e riflessi','2° motoneurone (periferico)','Forza ridotta, tono ridotto, ROT ridotti/assenti, ipotrofia e fascicolazioni, Babinski assente'],
+['Segni','Lasègue','Dolore radicolare alla flessione dell\'arto inferiore esteso sul bacino (L5–S1). Si annota l\'angolo'],
+['Segni','Lasègue crociato','Dolore all\'arto affetto sollevando quello controlaterale: ernia voluminosa o mediale'],
+['Segni','Wassermann','Dolore alla faccia anteriore della coscia all\'estensione dell\'anca (radici L2–L4)'],
+['Segni','Mingazzini','Mantenimento dell\'arto in posizione antigravitaria: I (superiori), II (inferiori da supino)'],
+['Segni','Romberg','Instabilità a piedi uniti e occhi chiusi: deficit propriocettivo'],
+['Segni','Segni meningei','Rigidità nucale, Kernig, Brudzinski: irritazione meningea'],
+['Altri termini','Afasia (motoria / sensitiva / globale)','Disturbo del linguaggio: produzione / comprensione / entrambe'],
+['Altri termini','Disartria','Difficoltà di articolazione della parola, linguaggio conservato'],
+['Altri termini','Atassia','Incoordinazione (cerebellare o sensitiva)'],
+['Altri termini','Dismetria','Errore di misura nel raggiungere un bersaglio'],
+['Altri termini','Adiadococinesia','Incapacità di eseguire movimenti alternati rapidi'],
+['Altri termini','Emianopsia','Perdita di metà del campo visivo'],
+['Altri termini','Anisocoria / midriasi / miosi','Pupille diseguali / dilatate / ristrette'],
+['Altri termini','Diplopia','Visione doppia: paralisi dei nervi oculomotori'],
+['Altri termini','Ptosi','Caduta della palpebra'],
+['Altri termini','Nistagmo','Oscillazione ritmica involontaria dei globi oculari'],
+['Altri termini','Neglect (eminattenzione)','Mancata attenzione a un lato dello spazio o del corpo'],
+['Altri termini','Aprassia','Incapacità di eseguire movimenti finalizzati senza deficit di forza'],
+['Altri termini','Claudicatio neurogena','Dolore e debolezza alla marcia, alleviati dalla flessione del tronco (stenosi lombare)'],
+['Marcia','Marcia falciante','Arto inferiore spastico che ruota in fuori: emiparesi'],
+['Marcia','Marcia steppante','Piede cadente sollevato in alto: deficit L5 o nervo sciatico popliteo esterno'],
+['Marcia','Marcia atassica','A base allargata, instabile: cerebellare o sensitiva'],
+['Marcia','Marcia parkinsoniana','A piccoli passi, festinante (accelera come inseguendo il baricentro), tronco flesso in avanti, pendolarità delle braccia ridotta, girata "en bloc". Può associarsi a camptocormia'],
+['Marcia','Marcia magnetica','Piedi che sembrano incollati al suolo, passi brevi, base allargata, difficoltà ad avviarsi e a girarsi: idrocefalo normoteso'],
+['Marcia','Triade di Hakim (idrocefalo normoteso)','Disturbo della marcia, incontinenza urinaria, deterioramento cognitivo'],
+['Marcia','Camptocormia','Flessione anteriore del tronco in stazione eretta e alla marcia, che si riduce da supino. Parkinson, distonie, patologia lombare'],
+['Altri termini','Radicolopatia / mielopatia / plessopatia','Sofferenza di radice / midollo / plesso'],
+['Altri termini','Cauda equina','Compressione delle radici sacrali: anestesia a sella, disturbi sfinterici, deficit bilaterali. Urgenza chirurgica']
+];
+
+/* ---------- normali ---------- */
+function setAll(o){Object.keys(o).forEach(function(k){S[k]=o[k]})}
+var NORM={
+ cos:function(){setAll({'c.e':'4','c.v':'5','c.m':'6','c.vig':'Vigile','c.coop':'Collaborante','c.ori':'Orientato nei tre parametri','c.ling':'Fluente','c.dis':'Assente','c.neg':'Assente'})},
+ nc:function(){NC.forEach(function(r){S['nc.'+r[0]+'.dx']='Normale';S['nc.'+r[0]+'.sx']='Normale'})},
+ mot:function(){setAll({'m.tono':'Normale','m.trof':'Conservato','m.m2':'Mantenuto'});if(T().m1)S['m.m1']='Mantenuto';
+   visM().forEach(function(m){S['f.'+m[0]+'.dx']='5';S['f.'+m[0]+'.sx']='5'})},
+ rif:function(){visR().forEach(function(r){S['r.'+r[0]+'.dx']='2';S['r.'+r[0]+'.sx']='2'});
+   ['dx','sx'].forEach(function(s){S['r.bab.'+s]='Flessorio';if(T().hof)S['r.hof.'+s]='Negativo';S['r.clo.'+s]='Assente'})},
+ sens:function(){setAll({'s.sens':'Conservata','s.sella':'Conservata','s.prop':'Conservata','s.coord':'Corrette','s.romb':'Negativo','s.marcia':'Autonoma','s.punte':'Possibile'})},
+ seg:function(){setAll({'g.men':'Assenti','g.sf':'riferiti controllati','g.ton':'Normale'});
+   if(T().ten)['las','lcr','was'].forEach(function(r){S['g.'+r+'.dx']='Negativo';S['g.'+r+'.sx']='Negativo'})}
+};
+
+/* ---------- report ---------- */
+function sideWord(d,s){return d&&s?'bilateralmente':d?'a destra':s?'a sinistra':''}
+function dateIt(v){if(!v)return '';var p=v.split('-');return p[2]+'/'+p[1]+'/'+p[0]}
+function build(){
+  var o={dati:[],sx:[],cos:[],nc:[],mot:[],rif:[],ten:[],sens:[],seg:[],mar:[],scale:[],con:[]};
+  var v=function(k){return S[k]};
+  // dati
+  if(v('d.id')||v('d.eta')||v('d.sex'))o.dati.push('Paziente '+(v('d.id')||'—')+(v('d.eta')?', '+v('d.eta')+' anni':'')+(v('d.sex')?', '+v('d.sex'):''));
+  o.dati.push('Esame del '+dateIt(v('d.date')||today));
+  if(v('d.ctx'))o.dati.push(v('d.ctx'));
+  if(v('d.dx'))o.dati.push('Diagnosi/intervento: '+v('d.dx'));
+  if(v('d.dom'))o.dati.push('Lato dominante '+lc(v('d.dom')));
+  // sintomo
+  if(v('z.sx'))o.sx.push(v('z.sx').replace(/[.\s]+$/,''));
+  // coscienza
+  if(showTab('cos')){
+  var p=[];['c.vig','c.coop','c.ori'].forEach(function(k){if(v(k))p.push(lc(v(k)))});
+  if(p.length)o.cos.push(p.join(', '));
+  if(v('c.ling'))o.cos.push(v('c.ling')==='Fluente'?'eloquio fluente':lc(v('c.ling')));
+  if(v('c.dis'))o.cos.push(v('c.dis')==='Presente'?'disartria':'non disartria');
+  if(v('c.neg')==='Presente')o.cos.push('neglect');
+  if(v('c.e')&&v('c.v')&&v('c.m')){var tot=(+v('c.e'))+(v('c.v')==='T'?1:+v('c.v'))+(+v('c.m'));
+    o.cos.push('GCS '+tot+(v('c.v')==='T'?'T':'')+' (E'+v('c.e')+' V'+v('c.v')+' M'+v('c.m')+')')}
+  if(v('c.nota'))o.cos.push(v('c.nota'));
+  }
+  // nervi cranici
+  var alt=[],unex=[],exam=0;
+  if(showTab('nc'))
+  NC.forEach(function(r){var d=v('nc.'+r[0]+'.dx'),s=v('nc.'+r[0]+'.sx');
+    if(!d&&!s){unex.push(r[3]);return}exam++;
+    var da=d==='Alterato',sa=s==='Alterato';
+    if(da||sa||v('nc.'+r[0]+'.n'))alt.push(r[1]+' ('+r[3].toLowerCase()+')'+(sideWord(da,sa)?' '+sideWord(da,sa):'')+(v('nc.'+r[0]+'.n')?': '+v('nc.'+r[0]+'.n'):''))});
+  if(exam){if(alt.length)o.nc.push('alterazione di '+alt.join('; '));
+    else o.nc.push(unex.length?'nervi cranici esaminati indenni (non valutati: '+unex.join(', ').toLowerCase()+')':'nervi cranici indenni')}
+  // motorio
+  if(v('m.tono'))o.mot.push('tono '+lc(v('m.tono')));
+  if(v('m.trof'))o.mot.push('trofismo '+lc(v('m.trof')));
+  var def=[],ex=0,tot5=0;
+  var grp={},gk=[];
+  visM().forEach(function(m){['dx','sx'].forEach(function(s){var x=v('f.'+m[0]+'.'+s);if(x===undefined)return;ex++;
+    if(+x<5){var key=s+x;if(!grp[key]){grp[key]=[];gk.push(key)}grp[key].push(m[4])}else tot5++})});
+  gk.forEach(function(key){var it=grp[key],l=it.length>1?it.slice(0,-1).join(', ')+' e '+it[it.length-1]:it[0];
+    def.push(l+(key[0]==='d'?' a destra':' a sinistra')+' ('+key.slice(2)+'/5)')});
+  if(def.length)o.mot.push('alle prove segmentarie contro-resistenza: deficit di '+def.join('; ')+((v('m.antalg')||[]).length?' su base antalgica':''));
+  else if(ex)o.mot.push(ex===visM().length*2?(T().ul?'forza 5/5 ai quattro arti':'forza 5/5 agli arti inferiori'):'forza 5/5 nei segmenti esaminati');
+  var mg=[];(T().m1?[['m.m1','I'],['m.m2','II']]:[['m.m2','II']]).forEach(function(r){if(v(r[0]))mg.push('Mingazzini '+r[1]+(v(r[0])==='Mantenuto'?' mantenuto':' con '+v(r[0])))});
+  if(mg.length)o.mot.push(mg.join(', '));
+  // riflessi
+  var cells=[];visR().forEach(function(r){['dx','sx'].forEach(function(s){var x=v('r.'+r[0]+'.'+s);if(x!==undefined)cells.push({r:r[1],s:s,x:x})})});
+  if(cells.length){var vals=cells.map(function(c){return c.x}),sym=vals.every(function(x){return x===vals[0]})&&cells.length>=2;
+    if(sym)o.rif.push(vals[0]==='2'?'ROT normoevocabili e simmetrici':'ROT '+GRTERM[vals[0]]+' simmetricamente');
+    else o.rif.push('ROT: '+cells.map(function(c){return c.r.toLowerCase()+' '+c.s+' '+GR[+c.x][1]}).join(', '))}
+  var pos=[],PY=[['bab','Babinski','Estensorio'],['hof','Hoffmann','Positivo'],['clo','clono','Presente']].filter(function(r){return r[0]!=='hof'||T().hof});
+  PY.forEach(function(r){
+    var d=v('r.'+r[0]+'.dx')===r[2],s=v('r.'+r[0]+'.sx')===r[2];if(d||s)pos.push(r[1]+' '+sideWord(d,s))});
+  var anyPy=PY.map(function(r){return r[0]}).some(function(r){return v('r.'+r+'.dx')||v('r.'+r+'.sx')});
+  if(pos.length)o.rif.push('segni piramidali: '+pos.join(', '));else if(anyPy)o.rif.push('non segni piramidali');
+  // tensione
+  (T().ten?[['Lasègue','las'],['Lasègue crociato','lcr'],['Wassermann','was']]:[]).forEach(function(r){
+    var d=v('g.'+r[1]+'.dx'),s=v('g.'+r[1]+'.sx');if(!d&&!s)return;
+    var dp=d==='Positivo',sp=s==='Positivo';
+    if(!dp&&!sp){o.ten.push(r[0]+' negativo'+(d&&s?' bilateralmente':d?' a destra':' a sinistra'));return}
+    var parts=[];if(dp)parts.push('a destra'+(v('g.'+r[1]+'.dxg')?' a '+v('g.'+r[1]+'.dxg')+'°':''));
+    if(sp)parts.push('a sinistra'+(v('g.'+r[1]+'.sxg')?' a '+v('g.'+r[1]+'.sxg')+'°':''));
+    o.ten.push(r[0]+' positivo '+parts.join(' e '))});
+  // sensibilità
+  var it=(v('s.sint')||[]).map(lc);if(v('s.sens')&&v('s.sens')!=='Conservata')it.push(lc(v('s.sens')));
+  if(it.length)o.sens.push(it.join(', ')+(v('s.dist')?' ('+v('s.dist')+')':''));
+  else if(v('s.sens'))o.sens.push('sensibilità tattile e dolorifica conservata');
+  if(v('s.liv'))o.sens.push('livello sensitivo '+v('s.liv'));
+  if(v('s.sella'))o.sens.push(v('s.sella')==='Conservata'?'sensibilità sellare conservata':lc(v('s.sella'))+' sellare');
+  if(v('s.prop'))o.sens.push('propriocezione '+lc(v('s.prop')));
+  if(v('s.coord'))o.sens.push(v('s.coord')==='Corrette'?'prove di coordinazione corrette':'dismetria');
+  if(v('s.romb'))o.sens.push('Romberg '+lc(v('s.romb')));
+  // meningei, sfinteri, rachide
+  if(v('g.men'))o.seg.push(v('g.men')==='Assenti'?'non segni meningei':'segni meningei presenti');
+  if(v('g.rach'))o.seg.push('rachide: '+v('g.rach'));
+  if(v('g.sf'))o.seg.push('sfinteri '+v('g.sf'));
+  if(v('g.ton'))o.seg.push('tono sfinterico anale '+lc(v('g.ton')));
+  if(v('g.fer'))o.seg.push('ferita/drenaggi: '+v('g.fer'));
+  // marcia
+  if(v('s.marcia')){var mm=v('s.marcia')==='Autonoma'?'marcia autonoma':v('s.marcia')==='Con ausilio'?'marcia con ausilio':'marcia non possibile';
+    if(v('s.punte'))mm+=v('s.punte')==='Possibile'?', possibile su punte e talloni':', non possibile su punte e talloni';
+    var tp=(v('s.tipo')||[]).map(lc);if(tp.length)mm+='; andatura '+tp.join(', ');o.mar.push(mm)}
+  else if((v('s.tipo')||[]).length)o.mar.push('andatura '+(v('s.tipo')).map(lc).join(', '));
+  // scale
+  var sc=SCALE.filter(function(s){return v('g.sc.'+s[0])}).map(function(s){return s[1].replace(/ \(.*\)/,'')+' '+v('g.sc.'+s[0])});
+  if(sc.length)o.scale.push('scale: '+sc.join('; '));
+  // conclusioni
+  if(v('z.conf'))o.con.push('rispetto all\'esame precedente'+(v('z.confd')?' ('+dateIt(v('z.confd'))+')':'')+': '+lc(v('z.conf'))+(v('z.confn')?' — '+v('z.confn'):''));
+  return o;
+}
+var HEAD={dati:'DATI GENERALI',sx:'QUADRO CLINICO',cos:'COSCIENZA E FUNZIONI SUPERIORI',nc:'NERVI CRANICI',mot:'ESAME MOTORIO',rif:'RIFLESSI E SEGNI PIRAMIDALI',ten:'SEGNI DI TENSIONE RADICOLARE',sens:'SENSIBILITÀ E COORDINAZIONE',seg:'SEGNI MENINGEI, SFINTERI, RACHIDE',mar:'MARCIA',scale:'SCALE',con:'CONFRONTO E CONCLUSIONI'};
+function genReport(){
+  var o=build(),order=['sx','cos','nc','mot','rif','ten','sens','seg','mar','scale','con'];
+  var sent=[];order.forEach(function(g){o[g].forEach(function(s){sent.push(cap(s))})});
+  $('rep1').value=sent.length?sent.join('. ')+'.':'Nessun dato inserito: compila almeno una sezione.';
+  var lines=[];
+  Object.keys(HEAD).forEach(function(g){
+    var arr=o[g].slice();
+    if(g==='con'){if(S['z.img'])arr.push('correlazione con l\'imaging: '+S['z.img']);if(S['z.ind'])arr.push('indicazioni: '+S['z.ind']);if(S['z.firma'])arr.push('firma: '+S['z.firma'])}
+    if(arr.length){lines.push(HEAD[g]);arr.forEach(function(s){lines.push('- '+cap(s))});lines.push('')}});
+  $('rep2').value=lines.length?lines.join('\n').trim():'Nessun dato inserito: compila almeno una sezione.';
+}
+
+/* ---------- suggerimento termine ---------- */
+function syndrome(){
+  var aff=[];
+  [['ul','dx'],['ul','sx'],['ll','dx'],['ll','sx']].forEach(function(l){
+    var vals=visM().filter(function(m){return m[3]===l[0]}).map(function(m){return S['f.'+m[0]+'.'+l[1]]}).filter(function(x){return x!==undefined}).map(Number);
+    if(vals.some(function(x){return x<5}))aff.push({r:l[0],s:l[1],pl:vals.every(function(x){return x===0})});
+  });
+  if(!aff.length)return '';
+  var pl=aff.every(function(a){return a.pl}),b=pl?'plegia':'paresi',n=aff.length,sd=function(s){return s==='dx'?'destra':'sinistra'};
+  var name,a=aff[0];
+  if(n===1)name='Mono'+b+' '+(a.r==='ul'?'brachiale':'crurale')+' '+sd(a.s);
+  else if(n===2&&aff[0].s===aff[1].s&&aff[0].r!==aff[1].r)name='Emi'+b+' '+sd(a.s);
+  else if(n===2&&aff[0].r===aff[1].r)name=a.r==='ll'?'Para'+b:(pl?'Diplegia brachiale':'Diparesi brachiale');
+  else if(n===2)name='Deficit crociato ('+aff.map(function(x){return (x.r==='ul'?'arto sup. ':'arto inf. ')+sd(x.s)}).join(' e ')+')';
+  else if(n===3)name='Tri'+b+' ('+aff.map(function(x){return (x.r==='ul'?'sup. ':'inf. ')+sd(x.s)}).join(', ')+')';
+  else name='Tetra'+b;
+  return name;
+}
+
+/* ---------- montaggio ---------- */
+function paint(el){
+  var k=el.dataset.k||'',x=el.value,alt=false;
+  if(/^f\./.test(k)&&x!=='')alt=+x<5;
+  if(/^r\.(bic|sr|tric|rot|ach)\./.test(k)&&x!=='')alt=x!=='2';
+  el.classList.toggle('alt',alt);
+}
+function mountPanel(id){
+  var el=$('p-'+id);el.innerHTML='<div class="card">'+VIEW[id]()+navHtml(id)+'</div>';
+  el.querySelectorAll('select[data-k]').forEach(paint);
+  if(id==='dati'&&!S['d.date']){var d=el.querySelector('input[data-k="d.date"]');if(d)d.value=today}
+  if(id==='glo')drawGlossary('');
+  if(id==='mot')updateSyn();
+}
+function navHtml(id){
+  var V=PANELS.filter(function(p){return showTab(p.id)}),i=V.findIndex(function(p){return p.id===id}),prev=V[i-1],next=V[i+1];
+  return '<div class="foot">'+(prev?'<button class="btn quiet" type="button" data-go="'+prev.id+'">← '+prev.label+'</button>':'<span></span>')+
+    (next?'<button class="btn fill" type="button" data-go="'+next.id+'">'+next.label+' →</button>':'<span></span>')+'</div>';
+}
+function applyTpl(){
+  PANELS.forEach(function(p){$('t-'+p.id).hidden=!showTab(p.id);if(p.id!=='dati')mountPanel(p.id)});
+  $('p-dati').querySelector('.foot').outerHTML=navHtml('dati');
+  updateDots();
+}
+function show(id){
+  PANELS.forEach(function(p){var t=$('t-'+p.id);t.setAttribute('aria-selected',p.id===id);$('p-'+p.id).hidden=p.id!==id});
+  if(id==='rep')genReport();
+  var t=$('t-'+id);if(t&&t.scrollIntoView)t.scrollIntoView({block:'nearest',inline:'center'});
+  window.scrollTo(0,0);
+}
+function updateDots(){
+  PANELS.forEach(function(p){if(!p.re)return;var on=Object.keys(S).some(function(k){return p.re.test(k)&&S[k]!==''&&!(Array.isArray(S[k])&&!S[k].length)&&k!=='d.date'&&k!=='d.tpl'});
+    var t=$('t-'+p.id),d=t.querySelector('.dot');if(on&&!d)t.insertAdjacentHTML('beforeend','<span class="dot" aria-label="compilato"></span>');if(!on&&d)d.remove()});
+}
+function updateSyn(){
+  var el=$('syn');if(!el)return;var s=syndrome();
+  el.hidden=!s;if(s)el.innerHTML='Termine suggerito dai valori inseriti: <b>'+esc(s)+'</b>. Verifica sempre con il quadro clinico (es. deficit su base antalgica).';
+}
+function changed(){save();updateDots();updateSyn()}
+function drawGlossary(q){
+  q=(q||'').toLowerCase();var rows=G.filter(function(r){return !q||(r[0]+' '+r[1]+' '+r[2]).toLowerCase().indexOf(q)>-1});
+  if(!rows.length){$('gout').innerHTML='<p class="desc">Nessun termine trovato.</p>';return}
+  var cat='',h='';rows.forEach(function(r){if(r[0]!==cat){if(cat)h+='</table>';cat=r[0];h+='<h3>'+esc(cat)+'</h3><table class="g-table">'}
+    h+='<tr><td>'+esc(r[1])+'</td><td>'+esc(r[2])+'</td></tr>'});
+  $('gout').innerHTML=h+'</table>';
+}
+
+// scheletro
+$('tabs').innerHTML=PANELS.map(function(p){return '<button type="button" class="tab" role="tab" id="t-'+p.id+'" data-go="'+p.id+'" aria-selected="false">'+p.label+'</button>'}).join('');
+$('panels').innerHTML=PANELS.map(function(p){return '<section id="p-'+p.id+'" role="tabpanel" aria-labelledby="t-'+p.id+'" hidden></section>'}).join('');
+PANELS.forEach(function(p){mountPanel(p.id)});
+applyTpl();show('dati');
+
+// eventi
+document.addEventListener('click',function(e){
+  var b=e.target.closest('.seg button');
+  if(b){var g=b.parentElement,k=g.dataset.k,val=b.dataset.v;
+    if(g.dataset.multi){var a=S[k]||[],i=a.indexOf(val);if(i>-1)a.splice(i,1);else a.push(val);if(a.length)S[k]=a;else delete S[k]}
+    else{if(S[k]===val)delete S[k];else S[k]=val}
+    g.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed',g.dataset.multi?(S[k]||[]).indexOf(x.dataset.v)>-1:S[k]===x.dataset.v)});
+    if(k==='d.tpl')applyTpl();
+    changed();return}
+  var go=e.target.closest('[data-go]');if(go){show(go.dataset.go);return}
+  var nm=e.target.closest('[data-norm]');if(nm){NORM[nm.dataset.norm]();mountPanel(nm.dataset.norm);changed();return}
+  var cp=e.target.closest('[data-copy]');
+  if(cp){var ta=$(cp.dataset.copy),orig=cp.textContent;
+    var done=function(m){cp.textContent=m;setTimeout(function(){cp.textContent=orig},1800)};
+    try{navigator.clipboard.writeText(ta.value).then(function(){done('Copiato')},function(){ta.select();done('Selezionato: copia con Ctrl/Cmd+C')})}catch(x){ta.select();done('Selezionato: copia con Ctrl/Cmd+C')}
+    return}
+  if(e.target.id==='regen'){genReport();return}
+});
+document.addEventListener('input',function(e){
+  var t=e.target;
+  if(t.id==='gsearch'){drawGlossary(t.value);return}
+  if(!t.dataset||!t.dataset.k||t.closest('.seg'))return;
+  if(t.value==='')delete S[t.dataset.k];else S[t.dataset.k]=t.value;
+  if(t.tagName==='SELECT')paint(t);
+  changed();
+});
+var rt;
+$('reset').addEventListener('click',function(){
+  var b=$('reset');
+  if(b.dataset.arm){clearTimeout(rt);var tp=S['d.tpl'];Object.keys(S).forEach(function(k){delete S[k]});if(tp)S['d.tpl']=tp;save();PANELS.forEach(function(p){mountPanel(p.id)});applyTpl();show('dati');
+    b.dataset.arm='';b.textContent='Nuovo paziente';b.className='btn quiet';return}
+  b.dataset.arm='1';b.textContent='Conferma: cancella tutto';b.className='btn danger';
+  rt=setTimeout(function(){b.dataset.arm='';b.textContent='Nuovo paziente';b.className='btn quiet'},4000);
+});
+})();
+</script>
+<script>
+if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
+</script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // Cache per l'uso offline: rete prima per i file dell'app (così gli aggiornamenti arrivano subito), cache prima per i font
-const C = 'neurosurg-clinic-v4';
+const C = 'neurosurg-clinic-v5';
 const CORE = ['./', './index.html', './app.js', './fields.js', './xlsx.js', './manifest.webmanifest', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(C).then(c => c.addAll(CORE))); self.skipWaiting(); });
 self.addEventListener('activate', e => {

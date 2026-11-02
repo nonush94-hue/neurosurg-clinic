@@ -636,7 +636,7 @@ function homeHtml(){var m=meta(),today=DB.vis.filter(function(v){return v.data['
    'L\'Excel invece <b>non si aggiorna da solo</b>: è una copia che crei con "Esporta Excel" e contiene tutti i dati fino a quel momento.</p>'+
    '<div class="hint'+(nx?' warn':'')+'">'+(m.xlsx?'Ultimo Excel esportato il '+new Date(m.xlsx).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})+'. ':'Nessun Excel esportato finora. ')+
    (nx?nx+(nx===1?' visita nuova o modificata non è ancora':' visite nuove o modificate non sono ancora')+' nell\'Excel.':(DB.vis.length?'L\'Excel contiene tutte le visite.':''))+'</div>'+
-   (dirty()?'<div class="hint warn">Ci sono dati non ancora salvati in un backup'+(m.backup?' (ultimo: '+new Date(m.backup).toLocaleDateString('it-IT')+')':'')+'. Se l\'app viene eliminata o l\'iPad si guasta, i dati si perdono: fai un backup e salvalo in File o OneDrive.</div>':'')+
+   (dirty()?'<div class="hint warn">Ci sono dati non ancora salvati in un backup'+(m.backup?' (ultimo: '+new Date(m.backup).toLocaleDateString('it-IT')+')':'')+'. Se l\'app viene eliminata o l\'iPad si guasta, i dati si perdono: fai un backup e salvalo su Google Drive.</div>':'')+
    '<div class="acts"><button class="btn" type="button" data-act="xlsx">Esporta Excel</button><button class="btn" type="button" data-act="xlsx-anon">Excel senza anagrafica</button>'+
    '<button class="btn" type="button" data-act="backup">Backup (.json)</button><button class="btn quiet" type="button" data-act="restore">Ripristina backup</button></div>'+
    '<p class="desc" id="hmsg" role="status"></p>'+
@@ -751,14 +751,14 @@ function exportXlsx(anon){
     sheets.push({name:c.s,rows:[cc.map(function(x){return x.h})].concat(cv.map(function(v){return rowOfV(cc,v)}))})});
   deliver(window.XLSXW.build(sheets),'NeurosurgClinic_'+(anon?'anonimo_':'')+td()+'.xlsx');
   if(!anon){setMeta({xlsx:Date.now()});
-    setTimeout(function(){if(!$('v-home').hidden){$('v-home').innerHTML=homeHtml();drawPList();$('hmsg').textContent='Excel creato con '+vs.length+' visite: salvalo in File o OneDrive.'}},600)}
+    setTimeout(function(){if(!$('v-home').hidden){$('v-home').innerHTML=homeHtml();drawPList();$('hmsg').textContent='Excel creato con '+vs.length+' visite: salvalo su Google Drive.'}},600)}
 }
 function backup(){
   flush();
   var data={app:'neurosurg-exam',version:1,exported:new Date().toISOString(),pat:DB.pat,vis:DB.vis};
   deliver(new Blob([JSON.stringify(data)],{type:'application/json'}),'NeurosurgClinic_backup_'+td()+'.json');
   setMeta({backup:Date.now()});
-  setTimeout(function(){if(!$('v-home').hidden){$('v-home').innerHTML=homeHtml();drawPList();$('hmsg').textContent='Backup creato: salvalo in File o OneDrive.'}},600);
+  setTimeout(function(){if(!$('v-home').hidden){$('v-home').innerHTML=homeHtml();drawPList();$('hmsg').textContent='Backup creato: salvalo su Google Drive.'}},600);
 }
 function restore(text){
   var d,np=0,nv=0;try{d=JSON.parse(text)}catch(e){}
